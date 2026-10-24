@@ -1,0 +1,2625 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PENJAGA BUMI NUSANTARA — Game Edukasi Interaktif Pelestarian Lingkungan (Fase C SD/MI)</title>
+  <meta name="description" content="Game Edukasi Interaktif Pelestarian Lingkungan untuk Fase C (Kelas 5-6 SD/MI) karya Bachtiar Imani, S.Pd. (SDN 2 Girimarto, Wonogiri) — HUT Ke-81 PGRI & HGN 2026.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-display { font-family: 'Outfit', sans-serif; }
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 0; }
+      100% { transform: scale(0.95); opacity: 0; }
+    }
+    .radar-pulse {
+      animation: pulseRing 2s cubic-bezier(0.2, 0, 0, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col select-none overflow-x-hidden">
+
+  <!-- ==================== TOP NAVIGATION / HUD ==================== -->
+  <header id="mainHeader" class="bg-slate-900/95 border-b border-slate-800 text-slate-100 px-3 sm:px-6 py-2.5 sticky top-0 z-40 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      <!-- Creator Brand -->
+      <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+        <div class="flex items-center gap-2">
+          <!-- Official PGRI Logo with SVG Fallback -->
+          <img src="https://i.imgur.com/5isghy7.png" alt="Logo PGRI" class="w-9 h-9 object-contain" onerror="this.outerHTML='<svg class=\'w-9 h-9\' viewBox=\'0 0 100 100\' fill=\'none\'><circle cx=\'50\' cy=\'50\' r=\'45\' fill=\'#047857\'/><circle cx=\'50\' cy=\'50\' r=\'38\' fill=\'#FFF\'/><text x=\'50\' y=\'56\' text-anchor=\'middle\' fill=\'#047857\' font-size=\'14\' font-weight=\'bold\'>PGRI</text></svg>'">
+          <!-- Official Wonogiri Logo with SVG Fallback -->
+          <img src="https://i.imgur.com/RVQBxN6.png" alt="Logo Wonogiri" class="w-9 h-9 object-contain" onerror="this.outerHTML='<svg class=\'w-9 h-9\' viewBox=\'0 0 100 100\' fill=\'none\'><circle cx=\'50\' cy=\'50\' r=\'45\' fill=\'#0284C7\'/><circle cx=\'50\' cy=\'50\' r=\'38\' fill=\'#047857\'/><text x=\'50\' y=\'56\' text-anchor=\'middle\' fill=\'#FFF\' font-size=\'11\' font-weight=\'bold\'>WONOGIRI</text></svg>'">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-sm sm:text-base tracking-tight text-emerald-400 font-display">PENJAGA BUMI NUSANTARA</span>
+              <span class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-mono">FASE C</span>
+            </div>
+            <p class="text-[10px] text-slate-400">Bachtiar Imani, S.Pd. · SDN 2 Girimarto (Wonogiri)</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 md:hidden">
+          <button onclick="openModal('missionMapModal')" class="text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-300 px-2 py-1.5 rounded-lg border border-emerald-500/50 font-bold">🗺️ Peta</button>
+          <button onclick="openModal('educationModal')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg border border-slate-700">📖 Info</button>
+        </div>
+      </div>
+
+      <!-- Live HUD Metrics (Visible during Gameplay) -->
+      <div id="gameplayHud" class="hidden flex-wrap items-center justify-center gap-2 sm:gap-4 w-full md:w-auto">
+        <div class="flex flex-col items-center min-w-[130px] sm:min-w-[170px]">
+          <div class="flex items-center justify-between w-full text-[11px] font-semibold text-slate-300">
+            <span id="hudMissionLabel" class="truncate max-w-[110px] text-emerald-300">Misi 1/6: Pilah SNI</span>
+            <span id="hudEarthPct" class="font-mono text-emerald-400 font-bold">50%</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700 mt-0.5">
+            <div id="hudEarthBar" class="h-full bg-gradient-to-r from-amber-500 via-emerald-500 to-cyan-400 transition-all duration-500 rounded-full" style="width: 50%"></div>
+          </div>
+        </div>
+
+        <div id="hudLives" class="flex items-center gap-1 bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700 text-xs">
+          ❤️❤️❤️
+        </div>
+
+        <div class="bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700 text-center">
+          <span class="text-[9px] text-slate-400 block -mb-0.5">Poin Amal</span>
+          <span id="hudScore" class="font-mono text-xs sm:text-sm font-bold text-amber-300">0</span>
+        </div>
+
+        <div id="hudTimer" class="px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800 text-cyan-300 font-mono text-xs sm:text-sm font-bold">
+          ⏱️ <span id="timerText">01:00</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex items-center gap-2">
+        <button onclick="openModal('missionMapModal')" class="hidden md:flex text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-300 font-bold px-3 py-1.5 rounded-lg border border-emerald-500/50 items-center gap-1">
+          🗺️ Peta Misi
+        </button>
+        <button id="btnSound" onclick="toggleSound()" class="p-1.5 rounded-lg text-xs bg-slate-800 text-emerald-400 border border-slate-700" title="Audio">🔊</button>
+        <button id="btnAR" onclick="toggleAR()" class="p-1.5 sm:px-2 sm:py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-200 border border-slate-700" title="Kamera AR MediaPipe">📷 AR</button>
+        <button onclick="openModal('educationModal')" class="hidden md:flex text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg border border-slate-700">📖 Info & Juknis</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== SCREEN 1: SPLASH SCREEN ==================== -->
+  <main id="splashScreen" class="flex-1 flex flex-col items-center justify-between p-4 sm:p-6 max-w-6xl mx-auto w-full">
+    <div class="text-center space-y-3 mt-2">
+      <div class="inline-block px-4 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-xs font-bold text-emerald-300">
+        🌱 LOMBA GAME EDUKASI AI PGRI WONOGIRI 2026 — FASE C (SD/MI KELAS 5–6)
+      </div>
+      <h1 class="text-3xl sm:text-5xl md:text-6xl font-black text-white font-display tracking-tight">
+        PENJAGA BUMI <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">NUSANTARA</span>
+      </h1>
+      <p class="text-xs sm:text-base text-slate-300 max-w-2xl font-medium leading-relaxed mx-auto">
+        Jadilah <strong>Khalifah fil Ardh</strong> yang memelihara kelestarian lingkungan biotik dan abiotik sebagai wujud ibadah dan syukur kepada Tuhan Yang Maha Esa.
+      </p>
+
+      <!-- 3D Planet Earth Canvas -->
+      <div class="py-2 flex flex-col items-center">
+        <div id="threeEarthContainer" class="w-60 h-60 relative flex items-center justify-center cursor-grab active:cursor-grabbing"></div>
+        <span class="text-[11px] text-slate-400 mt-1 font-mono">🔄 Sentuh & geser bola bumi 3D untuk memutar 360°</span>
+      </div>
+    </div>
+
+    <!-- Mode & Difficulty Selectors -->
+    <div class="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 my-3">
+      <div class="bg-slate-800/60 border border-slate-700/80 p-3.5 rounded-2xl space-y-2">
+        <span class="text-xs font-bold text-emerald-400 block uppercase">1. Mode Permainan:</span>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="modeSoloBtn" onclick="setGameMode('solo')" class="p-2.5 rounded-xl border-2 border-emerald-400 bg-emerald-950/80 text-white font-bold text-xs flex flex-col items-center">
+            <span>👤 Solo</span>
+            <span class="text-[10px] text-slate-400 font-normal">Petualangan 6 Misi</span>
+          </button>
+          <button id="mode2PBtn" onclick="setGameMode('2p')" class="p-2.5 rounded-xl border-2 border-slate-700 bg-slate-900 text-slate-400 font-bold text-xs flex flex-col items-center">
+            <span>👥 2 Pemain</span>
+            <span class="text-[10px] text-slate-400 font-normal">Split-Screen Duel</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/60 border border-slate-700/80 p-3.5 rounded-2xl space-y-2">
+        <span class="text-xs font-bold text-emerald-400 block uppercase">2. Tingkat Kesulitan:</span>
+        <div class="grid grid-cols-3 gap-2">
+          <button id="diffMudah" onclick="setDifficulty('mudah')" class="p-2 rounded-xl border-2 border-emerald-400 bg-emerald-950/80 text-white font-bold text-xs">
+            🌱 Mudah<br><span class="text-[9px] text-slate-400">90s · 5❤️</span>
+          </button>
+          <button id="diffSedang" onclick="setDifficulty('sedang')" class="p-2 rounded-xl border-2 border-slate-700 bg-slate-900 text-slate-400 font-bold text-xs">
+            🌿 Sedang<br><span class="text-[9px] text-slate-400">60s · 3❤️</span>
+          </button>
+          <button id="diffSulit" onclick="setDifficulty('sulit')" class="p-2 rounded-xl border-2 border-slate-700 bg-slate-900 text-slate-400 font-bold text-xs">
+            🌳 HOTS<br><span class="text-[9px] text-slate-400">45s · 3❤️</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start Actions -->
+    <div class="flex flex-col sm:flex-row items-center gap-3 w-full max-w-xl my-2">
+      <button onclick="startGame()" class="w-full sm:flex-1 py-3.5 px-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-xl shadow-emerald-500/25 transition-transform hover:scale-102">
+        🚀 MULAI DARI AWAL
+      </button>
+      <button onclick="openModal('missionMapModal')" class="w-full sm:flex-1 py-3.5 px-4 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 font-extrabold text-xs sm:text-sm rounded-2xl border-2 border-emerald-500/60 shadow-lg shadow-emerald-500/15 transition-transform hover:scale-102">
+        🗺️ PETA MISI (PILIH MISI)
+      </button>
+      <button onclick="openModal('educationModal')" class="w-full sm:w-auto py-3.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-2xl border border-slate-700">
+        📖 Info
+      </button>
+    </div>
+
+    <footer class="text-center text-[11px] text-slate-500 border-t border-slate-800 pt-3 w-full">
+      Karya: Bachtiar Imani, S.Pd. · SDN 2 Girimarto · PGRI Cabang Girimarto, Wonogiri
+    </footer>
+  </main>
+
+  <!-- ==================== SCREEN 2: GAMEPLAY STAGE ==================== -->
+  <main id="gameplayScreen" class="hidden flex-1 flex flex-col items-center justify-center p-3 sm:p-6 max-w-5xl mx-auto w-full">
+    <!-- Dynamic Mission Stage Container -->
+    <div id="missionStage" class="w-full h-full flex flex-col items-center justify-between"></div>
+  </main>
+
+  <!-- ==================== SCREEN 3: VICTORY & EVALUATION ==================== -->
+  <main id="victoryScreen" class="hidden flex-1 flex flex-col items-center justify-center p-4 sm:p-6 max-w-4xl mx-auto w-full text-center space-y-5 animate-fadeIn">
+    <div class="inline-flex p-4 rounded-3xl bg-amber-500/20 border-2 border-amber-400/50 shadow-2xl">
+      <span class="text-5xl">🏆</span>
+    </div>
+    <div class="text-amber-400 text-2xl">⭐⭐⭐</div>
+    <h1 class="text-2xl sm:text-4xl font-black text-white font-display">SELAMAT! SELURUH 6 MISI SELESAI</h1>
+    <p class="text-xs sm:text-sm text-emerald-400 font-semibold max-w-lg mx-auto">
+      Kamu resmi dinobatkan sebagai <strong>KHALIFAH CILIK TELADAN PELESTARI LINGKUNGAN</strong>!
+    </p>
+
+    <!-- Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
+      <div class="bg-slate-800/80 border-2 border-emerald-500/50 p-3 rounded-2xl">
+        <span class="text-xs text-slate-400 uppercase">Poin Amal</span>
+        <div id="victoryScore" class="text-3xl font-black font-mono text-emerald-400">0</div>
+      </div>
+      <div class="bg-slate-800/80 border-2 border-cyan-500/50 p-3 rounded-2xl">
+        <span class="text-xs text-slate-400 uppercase">Kesehatan Bumi</span>
+        <div class="text-3xl font-black font-mono text-cyan-400">100%</div>
+      </div>
+      <div class="bg-slate-800/80 border-2 border-amber-500/50 p-3 rounded-2xl">
+        <span class="text-xs text-slate-400 uppercase">Tabungan Sampah</span>
+        <div id="victorySavings" class="text-2xl font-black font-mono text-amber-300">Rp35.000</div>
+      </div>
+    </div>
+
+    <!-- Certificate Banner -->
+    <div class="w-full max-w-xl bg-gradient-to-r from-emerald-950 via-slate-900 to-amber-950 border-2 border-amber-500/60 p-4 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
+      <div class="text-left space-y-0.5">
+        <span class="text-xs font-bold text-amber-400 uppercase">Sertifikat Resmi Berpredikat Teladan</span>
+        <h3 class="text-sm font-bold text-white">Unduh Sertifikat Digital Resolusi Tinggi (PNG HD)</h3>
+        <p class="text-[11px] text-slate-300">Tanda Tangan Pendidik SDN 2 Girimarto (PGRI Wonogiri)</p>
+      </div>
+      <button onclick="openModal('certificateModal')" class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow cursor-pointer shrink-0">
+        📜 Unduh Sertifikat
+      </button>
+    </div>
+
+    <!-- Collapsible Discussion -->
+    <div class="w-full max-w-xl bg-slate-900/90 border border-slate-700 rounded-2xl overflow-hidden text-left">
+      <button onclick="toggleElement('discussionBox')" class="w-full p-3.5 flex items-center justify-between text-xs font-bold text-emerald-400 hover:bg-slate-800">
+        <span>📋 Rincian Evaluasi Jawaban & Pembahasan Materi (Juknis Bagian J)</span>
+        <span>▼</span>
+      </button>
+      <div id="discussionBox" class="hidden p-4 border-t border-slate-800 space-y-3 text-xs text-slate-300 leading-relaxed max-h-60 overflow-y-auto">
+        <p><strong>1. Misi 1 (Pemilahan SNI):</strong> Sampah organik (Tong Hijau) terurai dalam 2–5 minggu. Anorganik seperti botol plastik butuh ±450 tahun dan harus didaur ulang. Limbah B3 beracun (baterai, pestisida) harus diamankan khusus.</p>
+        <p><strong>2. Misi 2 (Reforestasi):</strong> Penyiraman air 2L/bibit melembapkan tanah kering, disusul 500g pupuk kompos organik kaya unsur hara untuk memicu pertumbuhan buah lebat.</p>
+        <p><strong>3. Misi 3 (Keputusan HOTS):</strong> Menjaga alam melalui adab hemat energi rumah, gotong royong selokan sekolah, adab hemat wudu masjid, menolak buang sampah ke sungai, dan melestarikan taman kota.</p>
+        <p><strong>4. Misi 4 (Konsep 3R):</strong> Reduce (kurangi), Reuse (guna ulang), Recycle (daur ulang pabrik), Kompos (pupuk organik), dan Hemat (efisiensi).</p>
+        <p><strong>5. Misi 5 (Mesin Capit & Bank Sampah):</strong> Mengubah sampah anorganik terpilah menjadi tabungan ekonomi sirkuler sekolah bernilai rupiah.</p>
+        <p><strong>6. Misi 6 (Radar Kasus Nusantara):</strong> Pemecahan masalah krisis nyata pesisir Padang, Waduk Gajah Mungkur Wonogiri, Karhutla Kalimantan, Nusa Dua Bali, dan Mangrove Parepare melalui literasi pers resmi.</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 pt-2">
+      <button onclick="startGame()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl">🔄 Main Lagi</button>
+      <button onclick="exitToMenu()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl">🚪 Keluar ke Menu</button>
+    </div>
+  </main>
+
+  <!-- ==================== FEEDBACK TOAST ==================== -->
+  <div id="feedbackToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-lg pointer-events-none">
+    <div id="toastBox" class="p-3.5 rounded-2xl border-2 shadow-2xl backdrop-blur-md flex items-start gap-3 text-xs sm:text-sm font-semibold transition-all">
+      <span id="toastIcon" class="text-xl">✅</span>
+      <div class="flex-1 leading-snug">
+        <span id="toastTitle" class="font-bold block mb-0.5">JAWABAN TEPAT</span>
+        <span id="toastMsg" class="font-normal text-slate-200"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: PETA MISI (LOMPAT KE MISI MANAPUN) ==================== -->
+  <div id="missionMapModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
+    <div class="relative w-full max-w-3xl max-h-[92vh] bg-slate-900 border-2 border-emerald-500/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🗺️</span>
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-white font-display">PETA MISI PENJAGA BUMI</h2>
+            <p class="text-xs text-emerald-400">Pilih dan lompat langsung ke misi manapun yang ingin kamu mainkan!</p>
+          </div>
+        </div>
+        <button onclick="closeModal('missionMapModal')" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <div class="p-4 sm:p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 text-xs">
+        <!-- Misi 1 -->
+        <div class="p-3.5 rounded-2xl border-2 border-emerald-500/50 bg-emerald-950/30 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-sm text-emerald-300">🗑️ Misi 1: Pilah Sampah SNI</span>
+              <span class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded font-mono">SNI 19-3983</span>
+            </div>
+            <p class="text-slate-300 text-[11px] mb-3">Pilah 9 jenis sampah organik, anorganik, dan limbah B3 beracun beserta data waktu urainya.</p>
+          </div>
+          <button onclick="jumpToMission(0)" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-center">
+            🚀 Lompat ke Misi 1
+          </button>
+        </div>
+
+        <!-- Misi 2 -->
+        <div class="p-3.5 rounded-2xl border-2 border-teal-500/50 bg-teal-950/30 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-sm text-teal-300">🌱 Misi 2: Reforestasi Taman</span>
+              <span class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded font-mono">Konservasi</span>
+            </div>
+            <p class="text-slate-300 text-[11px] mb-3">Merawat 3 petak tanah kritis dengan air bersih (2L) lalu pupuk kompos organik (500g).</p>
+          </div>
+          <button onclick="jumpToMission(1)" class="w-full py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-center">
+            🚀 Lompat ke Misi 2
+          </button>
+        </div>
+
+        <!-- Misi 3 -->
+        <div class="p-3.5 rounded-2xl border-2 border-amber-500/50 bg-amber-950/30 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-sm text-amber-300">⚖️ Misi 3: Sikap Etis HOTS</span>
+              <span class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded font-mono">Etika Moral</span>
+            </div>
+            <p class="text-slate-300 text-[11px] mb-3">5 dilema moral nyata di Rumah, Sekolah, Tempat Ibadah, Sungai, dan Taman Kota.</p>
+          </div>
+          <button onclick="jumpToMission(2)" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-center">
+            🚀 Lompat ke Misi 3
+          </button>
+        </div>
+
+        <!-- Misi 4 -->
+        <div class="p-3.5 rounded-2xl border-2 border-blue-500/50 bg-blue-950/30 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-sm text-blue-300">🔤 Misi 4: Susun Kata 3R</span>
+              <span class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded font-mono">Literasi 3R</span>
+            </div>
+            <p class="text-slate-300 text-[11px] mb-3">Menyusun huruf acak membentuk kata REDUCE, REUSE, RECYCLE, KOMPOS, dan HEMAT.</p>
+          </div>
+          <button onclick="jumpToMission(3)" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-center">
+            🚀 Lompat ke Misi 4
+          </button>
+        </div>
+
+        <!-- Misi 5 -->
+        <div class="p-3.5 rounded-2xl border-2 border-purple-500/50 bg-purple-950/30 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-sm text-purple-300">🎯 Misi 5: Mesin Capit 3R</span>
+              <span class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded font-mono">Bank Sampah</span>
+            </div>
+            <p class="text-slate-300 text-[11px] mb-3">Mengendalikan pencapit 3R dan menghitung tabungan ekonomi sirkuler sekolah.</p>
+          </div>
+          <button onclick="jumpToMission(4)" class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-center">
+            🚀 Lompat ke Misi 5
+          </button>
+        </div>
+
+        <!-- Misi 6 -->
+        <div class="p-3.5 rounded-2xl border-2 border-rose-500/50 bg-rose-950/30 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-sm text-rose-300">🗺️ Misi 6: Radar Nusantara</span>
+              <span class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded font-mono">Kasus Nyata</span>
+            </div>
+            <p class="text-slate-300 text-[11px] mb-3">Peta kepulauan Indonesia dengan 5 radar krisis ekologi dan rujukan berita resmi.</p>
+          </div>
+          <button onclick="jumpToMission(5)" class="w-full py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-center">
+            🚀 Lompat ke Misi 6
+          </button>
+        </div>
+      </div>
+
+      <div class="px-6 py-3 border-t border-slate-800 bg-slate-900 flex justify-end">
+        <button onclick="closeModal('missionMapModal')" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg text-xs">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: EVALUASI SELESAI MISI (SKOR, PERINGKAT & REFLEKSI) ==================== -->
+  <div id="missionCompleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+    <div class="relative w-full max-w-lg bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-emerald-500/70 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+      <!-- Glow effect top bar -->
+      <div class="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500"></div>
+      
+      <div class="p-5 sm:p-6 text-center space-y-4">
+        <!-- Title & Sub -->
+        <div>
+          <span class="inline-block px-3 py-1 bg-emerald-950/80 border border-emerald-500/50 rounded-full text-[11px] font-bold text-emerald-300 uppercase tracking-wider mb-1.5">
+            🎉 Misi Selesai Sempurna!
+          </span>
+          <h2 id="mcMissionTitle" class="text-lg sm:text-xl font-black text-white font-display">Misi 1: Pemilahan Sampah SNI</h2>
+        </div>
+
+        <!-- Rank S/A/B & Star Rating Banner -->
+        <div class="p-3.5 bg-gradient-to-r from-amber-500/15 via-emerald-500/15 to-cyan-500/15 border border-emerald-500/40 rounded-2xl flex items-center justify-between px-4">
+          <div class="text-left">
+            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wide block">Hasil Evaluasi:</span>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span id="mcRankLetter" class="text-3xl font-black text-amber-400 font-display">S</span>
+              <div>
+                <div id="mcStars" class="text-sm tracking-widest text-amber-300">⭐⭐⭐</div>
+                <div id="mcRankDesc" class="text-[10px] text-emerald-300 font-semibold">Luar Biasa! Khalifah Lingkungan Teladan</div>
+              </div>
+            </div>
+          </div>
+          <div id="mcBadge" class="px-2.5 py-1 bg-slate-900/90 border border-amber-400/50 rounded-xl text-[11px] font-bold text-amber-300">
+            🏅 Pakar Pemilah SNI
+          </div>
+        </div>
+
+        <!-- 4 Stat Metric Cards -->
+        <div class="grid grid-cols-4 gap-2 text-center">
+          <div class="p-2 bg-slate-800/80 border border-slate-700 rounded-xl">
+            <span class="text-[10px] text-slate-400 block">Poin Amal</span>
+            <span id="mcScore" class="text-sm font-extrabold text-amber-400 font-mono">0</span>
+          </div>
+          <div class="p-2 bg-slate-800/80 border border-slate-700 rounded-xl">
+            <span class="text-[10px] text-slate-400 block">Kesehatan</span>
+            <span id="mcEarthHealth" class="text-sm font-extrabold text-emerald-400 font-mono">50%</span>
+          </div>
+          <div class="p-2 bg-slate-800/80 border border-slate-700 rounded-xl">
+            <span class="text-[10px] text-slate-400 block">Sisa Waktu</span>
+            <span id="mcTime" class="text-sm font-extrabold text-cyan-400 font-mono">60s</span>
+          </div>
+          <div class="p-2 bg-slate-800/80 border border-slate-700 rounded-xl">
+            <span class="text-[10px] text-slate-400 block">Sisa Nyawa</span>
+            <span id="mcLives" class="text-xs font-bold text-rose-400">❤️❤️❤️</span>
+          </div>
+        </div>
+
+        <!-- Pedagogical Reflection Box -->
+        <div class="p-3 bg-slate-900/90 border border-slate-800 rounded-2xl text-left space-y-1">
+          <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1">
+            🌱 Refleksi Pembelajaran Bermakna:
+          </span>
+          <p id="mcReflection" class="text-xs text-slate-300 leading-relaxed font-sans">
+            Kamu berhasil mengklasifikasikan sampah organik, anorganik, dan limbah B3. Mengetahui plastik butuh ±450 tahun terurai melatih nalar kritis membatasi plastik sekali pakai.
+          </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="pt-2 flex flex-col sm:flex-row gap-2">
+          <button onclick="retryCurrentMission()" class="flex-1 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-slate-200 transition">
+            🔄 Ulangi Misi
+          </button>
+          <button onclick="closeModal('missionCompleteModal'); openModal('missionMapModal');" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-slate-200 transition">
+            🗺️ Peta Misi
+          </button>
+          <button id="mcNextBtn" onclick="proceedNextMission()" class="flex-2 py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-xl text-xs shadow-lg shadow-emerald-500/20 transition cursor-pointer">
+            🚀 Lanjut ke Misi Berikutnya
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: NOTIFIKASI PERGANTIAN LEVEL ==================== -->
+  <div id="levelNotificationModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-fade-in pointer-events-auto">
+    <div class="relative w-full max-w-lg bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-2 border-emerald-400 rounded-3xl shadow-2xl shadow-emerald-500/25 p-5 sm:p-6 text-slate-100 overflow-hidden">
+      <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400"></div>
+      
+      <button onclick="closeModal('levelNotificationModal')" class="absolute top-3.5 right-3.5 text-slate-400 hover:text-white p-1 rounded-full hover:bg-slate-800 transition">
+        ✕
+      </button>
+
+      <div class="flex items-center gap-3 mb-3">
+        <div id="lnIcon" class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-teal-500/20 border-2 border-emerald-400/80 flex items-center justify-center text-3xl shadow-inner shadow-emerald-500/30">
+          ♻️
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/60 text-[10px] font-black uppercase tracking-wider">
+              ✨ NOTIFIKASI LEVEL BARU
+            </span>
+            <span id="lnBadge" class="text-[10px] text-amber-300 font-bold bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/40">
+              SNI 19-3983
+            </span>
+          </div>
+          <h2 id="lnTitle" class="text-lg sm:text-xl font-black text-white font-display mt-0.5">
+            Level 1: Pemilahan Sampah SNI
+          </h2>
+        </div>
+      </div>
+
+      <div class="p-3.5 bg-slate-800/80 border border-slate-700/80 rounded-2xl space-y-2 mb-3">
+        <p class="text-xs text-slate-200 leading-snug">
+          <strong class="text-emerald-300 font-bold">Tujuan Level:</strong> <span id="lnObjective">Pilah sampah ke Tong Hijau (Organik), Kuning (Anorganik), atau Merah (B3) sesuai standar SNI!</span>
+        </p>
+        <div class="text-[11px] text-slate-300 bg-slate-900/80 p-2 rounded-xl border border-slate-700/50 flex items-center gap-1.5">
+          <span class="text-amber-400 font-bold">💡 Petunjuk:</span>
+          <span id="lnHint">Perhatikan waktu urai sampah alami vs anorganik.</span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-1">
+        <div class="flex items-center gap-1.5 text-xs text-cyan-300 font-mono font-bold bg-cyan-950/60 px-3 py-1.5 rounded-xl border border-cyan-500/40">
+          <span>⏱️ Waktu: <span id="lnTime">60</span> Detik</span>
+        </div>
+
+        <button onclick="closeModal('levelNotificationModal')" class="py-2 px-5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition cursor-pointer">
+          Mulai Misi Sekarang ➔
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: PETUNJUK & JUKNIS (3 TABS) ==================== -->
+  <div id="educationModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="relative w-full max-w-3xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <h2 class="text-base sm:text-lg font-bold text-emerald-400 font-display">Petunjuk & Kurikulum Pembelajaran (Juknis PGRI 2026)</h2>
+        <button onclick="closeModal('educationModal')" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+      <div class="flex border-b border-slate-800 bg-slate-950/50 px-6 gap-2 text-xs">
+        <button onclick="setEduTab(1)" id="eduTabBtn1" class="py-2.5 px-3 font-semibold border-b-2 border-emerald-500 text-emerald-400">1. Cara Bermain</button>
+        <button onclick="setEduTab(2)" id="eduTabBtn2" class="py-2.5 px-3 font-semibold border-b-2 border-transparent text-slate-400">2. CP, TP & 4C</button>
+        <button onclick="setEduTab(3)" id="eduTabBtn3" class="py-2.5 px-3 font-semibold border-b-2 border-transparent text-slate-400">3. Pengembang & Lisensi</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4 text-xs text-slate-300 leading-relaxed flex-1">
+        <div id="eduTab1" class="space-y-3">
+          <p><strong>Misi 1:</strong> Pilah 9 sampah ke Tong Hijau (Organik), Kuning (Anorganik), atau Merah (B3).</p>
+          <p><strong>Misi 2:</strong> Rawat 3 bibit pohon kering retak secara berurutan: Gembor Air (Langkah 1) lalu Pupuk Kompos (Langkah 2).</p>
+          <p><strong>Misi 3:</strong> Selesaikan 5 dilema moral lingkungan di rumah, sekolah, masjid, sungai, dan taman kota.</p>
+          <p><strong>Misi 4:</strong> Susun huruf acak membentuk kata REDUCE, REUSE, RECYCLE, KOMPOS, dan HEMAT.</p>
+          <p><strong>Misi 5:</strong> Kendalikan mesin capit mekanik, capit barang, dan salurkan ke stasiun Reduce, Reuse, atau Recycle.</p>
+          <p><strong>Misi 6:</strong> Klik 5 titik radar di peta kepulauan Nusantara, pelajari faktanya, dan tetapkan solusi konservasi terbaik.</p>
+        </div>
+        <div id="eduTab2" class="hidden space-y-3">
+          <div class="p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-xl">
+            <strong class="text-emerald-300 block mb-1">Capaian Pembelajaran (CP Fase C):</strong>
+            <em>Peserta didik memahami peran dan tanggung jawab manusia sebagai Khalifah fil Ardh dalam memelihara kelestarian lingkungan biotik dan abiotik sebagai wujud ibadah dan syukur kepada Tuhan Yang Maha Esa.</em>
+          </div>
+          <p><strong>5 Tujuan Pembelajaran (TP):</strong> Klasifikasi sampah SNI & waktu urai, reforestasi pohon, pengambilan keputusan HOTS, penyusunan konsep 3R, dan pengelolaan Bank Sampah serta analisis kasus nyata Nusantara.</p>
+        </div>
+        <div id="eduTab3" class="hidden space-y-3">
+          <div class="p-3 bg-slate-800 rounded-xl border border-slate-700">
+            <strong class="text-white block">Identitas Pengembang:</strong>
+            <p>Nama: <strong>Bachtiar Imani, S.Pd.</strong></p>
+            <p>Satuan Pendidikan: <strong>SDN 2 Girimarto</strong></p>
+            <p>Utusan: <strong>PGRI Cabang Girimarto, Kab. Wonogiri, Jawa Tengah</strong></p>
+          </div>
+          <p><strong>Pernyataan Lisensi Aset (Juknis Section I.2.b):</strong> Seluruh vektor grafis adalah inline SVG orisinal co-created bersama Google Gemini; bola bumi 3D via Three.js (MIT); efek audio via Web Audio API; referensi berita merujuk pers resmi (Antara, Kompas, Detik, KKP).</p>
+        </div>
+      </div>
+      <div class="px-6 py-3 border-t border-slate-800 bg-slate-900 flex justify-end">
+        <button onclick="closeModal('educationModal')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: SERTIFIKAT HD (2000x1414) ==================== -->
+  <div id="certificateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
+    <div class="relative w-full max-w-4xl max-h-[95vh] bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+      <div class="px-5 py-3 border-b border-slate-800 flex items-center justify-between">
+        <h2 class="text-sm sm:text-base font-bold text-white font-display">📜 Sertifikat Resmi Penjaga Bumi Nusantara (HD 2000x1414)</h2>
+        <button onclick="closeModal('certificateModal')" class="text-slate-400 hover:text-white text-base">✕</button>
+      </div>
+      <div class="px-5 py-2.5 bg-slate-800/60 border-b border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-0.5">Nama Peserta Didik:</label>
+          <input id="certStudentInput" type="text" value="Ananda Khalifah Bumi" oninput="renderCertCanvas()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white font-bold">
+        </div>
+        <div>
+          <label class="block text-slate-300 font-semibold mb-0.5">Kelas / Satuan Pendidikan:</label>
+          <input id="certSchoolInput" type="text" value="SDN 2 Girimarto" oninput="renderCertCanvas()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white font-bold">
+        </div>
+      </div>
+      <div class="flex-1 overflow-auto p-3 flex items-center justify-center bg-slate-950">
+        <canvas id="certCanvas" class="max-w-full max-h-[55vh] object-contain rounded-xl shadow-2xl border border-slate-700"></canvas>
+      </div>
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-900 flex items-center justify-between">
+        <span class="text-[11px] text-slate-400">Penandatangan: Bachtiar Imani, S.Pd. (SDN 2 Girimarto)</span>
+        <button onclick="downloadCertificate()" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-extrabold text-xs rounded-xl shadow">
+          📥 Unduh PNG HD
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SOUND SYNTHESIZER & SCRIPT ENGINE ==================== -->
+  <script>
+    // 1. Procedural Web Audio API Engine
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('btnSound').innerText = soundEnabled ? '🔊' : '🔇';
+    }
+
+    function playBeep(type) {
+      if (!soundEnabled) return;
+      initAudio();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      if (type === 'click') {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.frequency.setValueAtTime(440, now);
+        g.gain.setValueAtTime(0.1, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(); osc.stop(now + 0.05);
+      } else if (type === 'success') {
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.frequency.setValueAtTime(f, now + i * 0.06);
+          g.gain.setValueAtTime(0.12, now + i * 0.06);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.2);
+          osc.connect(g); g.connect(audioCtx.destination);
+          osc.start(now + i * 0.06); osc.stop(now + i * 0.06 + 0.2);
+        });
+      } else if (type === 'error') {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.linearRampToValueAtTime(130, now + 0.2);
+        g.gain.setValueAtTime(0.12, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(); osc.stop(now + 0.2);
+      } else if (type === 'suck') {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(420, now);
+        osc.frequency.exponentialRampToValueAtTime(140, now + 0.22);
+        g.gain.setValueAtTime(0.14, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(); osc.stop(now + 0.22);
+      } else if (type === 'plop') {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.26);
+        g.gain.setValueAtTime(0.24, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(); osc.stop(now + 0.26);
+      }
+    }
+
+    // 2. Three.js 3D Earth Globe
+    let earthMesh, globeScene, globeCamera, globeRenderer;
+    function initThreeEarth() {
+      const container = document.getElementById('threeEarthContainer');
+      if (!container) return;
+      const w = 240, h = 240;
+
+      try {
+        container.innerHTML = '';
+        globeScene = new THREE.Scene();
+        globeCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+        globeCamera.position.set(0, 0, 2.85);
+
+        globeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        globeRenderer.setSize(w, h, false);
+        globeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        
+        globeRenderer.domElement.style.width = '240px';
+        globeRenderer.domElement.style.height = '240px';
+        globeRenderer.domElement.style.aspectRatio = '1 / 1';
+        globeRenderer.domElement.style.borderRadius = '50%';
+        globeRenderer.domElement.style.display = 'block';
+        globeRenderer.domElement.style.boxShadow = '0 15px 35px -5px rgba(2, 132, 199, 0.4), inset 0 0 25px rgba(0, 0, 0, 0.5)';
+        
+        container.appendChild(globeRenderer.domElement);
+
+        const amb = new THREE.AmbientLight(0xffffff, 0.95);
+        globeScene.add(amb);
+        const dir = new THREE.DirectionalLight(0xffffff, 1.4);
+        dir.position.set(5, 3, 5);
+        globeScene.add(dir);
+
+        // High detail Earth canvas texture
+        const cvs = document.createElement('canvas');
+        cvs.width = 1024; cvs.height = 512;
+        const c = cvs.getContext('2d');
+        
+        // Deep blue ocean gradient
+        const oGrad = c.createLinearGradient(0, 0, 0, 512);
+        oGrad.addColorStop(0, '#024A86');
+        oGrad.addColorStop(0.5, '#0284C7');
+        oGrad.addColorStop(1, '#024A86');
+        c.fillStyle = oGrad;
+        c.fillRect(0, 0, 1024, 512);
+
+        // Polar ice caps
+        c.fillStyle = '#FFFFFF';
+        c.beginPath(); c.ellipse(512, 15, 512, 30, 0, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(512, 495, 512, 35, 0, 0, Math.PI * 2); c.fill();
+
+        // Lush green continents
+        c.fillStyle = '#059669';
+        // Eurasia & Africa
+        c.beginPath(); c.ellipse(580, 150, 170, 75, 0.1, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(510, 280, 75, 100, 0.1, 0, Math.PI * 2); c.fill();
+        // Americas
+        c.beginPath(); c.ellipse(220, 140, 110, 75, -0.15, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(290, 320, 70, 95, 0.2, 0, Math.PI * 2); c.fill();
+        // Australia
+        c.beginPath(); c.ellipse(820, 350, 75, 55, 0, 0, Math.PI * 2); c.fill();
+
+        // Nusantara / Indonesia (Sumatera, Jawa, Kalimantan, Sulawesi, Papua)
+        c.fillStyle = '#10B981';
+        c.beginPath(); c.ellipse(710, 260, 24, 10, -0.4, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(740, 285, 26, 7, 0.1, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(750, 245, 20, 18, 0, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(780, 255, 14, 16, 0.3, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(835, 265, 30, 12, 0.1, 0, Math.PI * 2); c.fill();
+
+        const tex = new THREE.CanvasTexture(cvs);
+        const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.65, metalness: 0.1 });
+        earthMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 64), mat);
+        earthMesh.rotation.y = 3.6;
+        earthMesh.rotation.x = 0.2;
+        globeScene.add(earthMesh);
+
+        function animate() {
+          requestAnimationFrame(animate);
+          if (earthMesh) earthMesh.rotation.y += 0.0035;
+          globeRenderer.render(globeScene, globeCamera);
+        }
+        animate();
+      } catch (e) {
+        container.innerHTML = '<div class="w-[240px] h-[240px] rounded-full bg-emerald-600 border-4 border-cyan-400 flex items-center justify-center text-5xl shadow-2xl">🌏</div>';
+      }
+    }
+    window.addEventListener('DOMContentLoaded', initThreeEarth);
+
+    // 3. State Management
+    let gameDifficulty = 'sedang';
+    let gameMode = 'solo';
+    let currentMission = 0;
+    let score = 0;
+    let lives = 3;
+    let earthHealth = 50;
+    let bankSavings = 0;
+    let timerSeconds = 60;
+    // Fisher-Yates array shuffler for anti-pattern randomization
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function setDifficulty(d) {
+      gameDifficulty = d;
+      playBeep('click');
+      ['Mudah', 'Sedang', 'Sulit'].forEach(id => {
+        const el = document.getElementById('diff' + id);
+        el.className = 'p-2 rounded-xl border-2 border-slate-700 bg-slate-900 text-slate-400 font-bold text-xs';
+      });
+      const activeEl = document.getElementById('diff' + d.charAt(0).toUpperCase() + d.slice(1));
+      if (activeEl) activeEl.className = 'p-2 rounded-xl border-2 border-emerald-400 bg-emerald-950/80 text-white font-bold text-xs';
+    }
+
+    function setGameMode(m) {
+      gameMode = m;
+      playBeep('click');
+      const bSolo = document.getElementById('modeSoloBtn');
+      const b2P = document.getElementById('mode2PBtn');
+      if (m === 'solo') {
+        bSolo.className = 'p-2.5 rounded-xl border-2 border-emerald-400 bg-emerald-950/80 text-white font-bold text-xs flex flex-col items-center';
+        b2P.className = 'p-2.5 rounded-xl border-2 border-slate-700 bg-slate-900 text-slate-400 font-bold text-xs flex flex-col items-center';
+      } else {
+        b2P.className = 'p-2.5 rounded-xl border-2 border-blue-400 bg-blue-950/80 text-white font-bold text-xs flex flex-col items-center';
+        bSolo.className = 'p-2.5 rounded-xl border-2 border-slate-700 bg-slate-900 text-slate-400 font-bold text-xs flex flex-col items-center';
+      }
+    }
+
+    function startGame() {
+      playBeep('click');
+      score = 0;
+      bankSavings = 0;
+      earthHealth = 50;
+      currentMission = 0;
+      lives = gameDifficulty === 'mudah' ? 5 : 3;
+      timerSeconds = gameDifficulty === 'mudah' ? 90 : gameDifficulty === 'sedang' ? 60 : 45;
+
+      document.getElementById('splashScreen').classList.add('hidden');
+      document.getElementById('victoryScreen').classList.add('hidden');
+      document.getElementById('gameplayScreen').classList.remove('hidden');
+      document.getElementById('gameplayHud').classList.remove('hidden');
+      document.getElementById('gameplayHud').classList.add('flex');
+
+      updateHud();
+      loadMission(0);
+
+      startTimer();
+    }
+
+    function jumpToMission(idx) {
+      playBeep('success');
+      currentMission = idx;
+      closeModal('missionMapModal');
+      document.getElementById('splashScreen').classList.add('hidden');
+      document.getElementById('victoryScreen').classList.add('hidden');
+      document.getElementById('gameplayScreen').classList.remove('hidden');
+      document.getElementById('gameplayHud').classList.remove('hidden');
+      document.getElementById('gameplayHud').classList.add('flex');
+
+      updateHud();
+      loadMission(idx);
+      startTimer();
+      showToast(true, 'PETA MISI', 'Berhasil melompat ke Misi ' + (idx + 1) + '!');
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timerSeconds = gameDifficulty === 'mudah' ? 90 : gameDifficulty === 'sedang' ? 60 : 45;
+      timerInterval = setInterval(() => {
+        timerSeconds--;
+        const m = Math.floor(timerSeconds / 60);
+        const s = timerSeconds % 60;
+        document.getElementById('timerText').innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        if (timerSeconds <= 0) {
+          clearInterval(timerInterval);
+          playBeep('error');
+          alert('Waktu habis! Coba lagi.');
+          exitToMenu();
+        }
+      }, 1000);
+    }
+
+    function exitToMenu() {
+      clearInterval(timerInterval);
+      document.getElementById('gameplayScreen').classList.add('hidden');
+      document.getElementById('gameplayHud').classList.add('hidden');
+      document.getElementById('gameplayHud').classList.remove('flex');
+      document.getElementById('victoryScreen').classList.add('hidden');
+      document.getElementById('splashScreen').classList.remove('hidden');
+    }
+
+    function updateHud() {
+      document.getElementById('hudScore').innerText = score;
+      document.getElementById('hudEarthPct').innerText = Math.round(earthHealth) + '%';
+      document.getElementById('hudEarthBar').style.width = Math.min(100, Math.max(5, earthHealth)) + '%';
+      document.getElementById('hudLives').innerText = '❤️'.repeat(Math.max(0, lives));
+    }
+
+    function showToast(isCorrect, title, msg) {
+      const toast = document.getElementById('feedbackToast');
+      const box = document.getElementById('toastBox');
+      document.getElementById('toastIcon').innerText = isCorrect ? '✅' : '❌';
+      document.getElementById('toastTitle').innerText = title;
+      document.getElementById('toastMsg').innerText = msg;
+
+      box.className = isCorrect
+        ? 'p-3.5 rounded-2xl border-2 shadow-2xl backdrop-blur-md flex items-start gap-3 text-xs sm:text-sm font-semibold bg-emerald-950/95 border-emerald-400 text-emerald-100'
+        : 'p-3.5 rounded-2xl border-2 shadow-2xl backdrop-blur-md flex items-start gap-3 text-xs sm:text-sm font-semibold bg-rose-950/95 border-rose-500 text-rose-100';
+
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // 4. Level Transition Notification Data & Functions
+    const LEVEL_NOTIFICATION_DATA = [
+      {
+        num: 1,
+        title: 'Pemilahan Sampah Standar SNI',
+        icon: '♻️',
+        badge: 'SNI 19-3983',
+        objective: 'Pilah sampah ke Tong Hijau (Organik), Kuning (Anorganik), atau Merah (B3) sesuai standar SNI!',
+        hint: 'Perhatikan waktu urai sampah alami vs anorganik & limbah beracun.'
+      },
+      {
+        num: 2,
+        title: 'Aksi Reforestasi & Perawatan Pohon',
+        icon: '🌱',
+        badge: 'Konservasi Lahan',
+        objective: 'Rawat bibit pohon di petak tanah kering retak secara berurutan: Gembor Air (Langkah 1) lalu Pupuk Kompos (Langkah 2)!',
+        hint: 'Siram 2 liter air dahulu agar tanah lembap dan kompos dapat larut diserap akar.'
+      },
+      {
+        num: 3,
+        title: 'Simulasi Sikap Etis Khalifah fil Ardh (HOTS)',
+        icon: '⚖️',
+        badge: 'Akhlak Mulia',
+        objective: 'Pilih solusi terpuji dan berakhlak mulia menghadapi 5 dilema ekologis di sekolah dan masyarakat!',
+        hint: 'Gunakan nalar kritis dan empati kepedulian terhadap lingkungan.'
+      },
+      {
+        num: 4,
+        title: 'Susun Kata Kunci Prinsip 3R',
+        icon: '🔤',
+        badge: 'Literasi Ekologi',
+        objective: 'Susun huruf acak membentuk istilah kunci: REDUCE, REUSE, RECYCLE, KOMPOS, dan HEMAT!',
+        hint: 'Pahami definisi membatasi, memakai kembali, dan mendaur ulang barang bekas.'
+      },
+      {
+        num: 5,
+        title: 'Mesin Capit 3R & Bank Sampah',
+        icon: '🎯',
+        badge: 'Ekonomi Sirkuler',
+        objective: 'Kendalikan capit mekanik untuk menyalurkan barang ke stasiun 3R & kumpulkan tabungan Bank Sampah rupiah!',
+        hint: 'Setorkan barang bernilai daur ulang untuk menambah rupiah tabungan sekolah.'
+      },
+      {
+        num: 6,
+        title: 'Radar Krisis Ekologi Nusantara',
+        icon: '🗺️',
+        badge: 'Investigasi Nyata',
+        objective: 'Analisis 5 titik krisis ekologi riil di kepulauan Nusantara dan tentukan solusi terbaik berbasis data!',
+        hint: 'Termasuk kasus sedimentasi Waduk Gajah Mungkur Wonogiri, Jawa Tengah.'
+      }
+    ];
+
+    let levelNotifTimer = null;
+    function showLevelNotification(idx) {
+      const data = LEVEL_NOTIFICATION_DATA[idx] || LEVEL_NOTIFICATION_DATA[0];
+      document.getElementById('lnIcon').innerText = data.icon;
+      document.getElementById('lnBadge').innerText = data.badge;
+      document.getElementById('lnTitle').innerText = 'Level ' + data.num + ': ' + data.title;
+      document.getElementById('lnObjective').innerText = data.objective;
+      document.getElementById('lnHint').innerText = data.hint;
+      document.getElementById('lnTime').innerText = timerSeconds;
+
+      const modal = document.getElementById('levelNotificationModal');
+      modal.classList.remove('hidden');
+      playBeep('success');
+
+      if (levelNotifTimer) clearTimeout(levelNotifTimer);
+      levelNotifTimer = setTimeout(() => {
+        closeModal('levelNotificationModal');
+      }, 3200);
+    }
+
+    // 5. Mission Loader
+    function loadMission(idx) {
+      currentMission = idx;
+      showLevelNotification(idx);
+      const stage = document.getElementById('missionStage');
+
+      if (idx === 0) {
+        document.getElementById('hudMissionLabel').innerText = 'Misi 1/6: Pilah SNI';
+        stage.innerHTML = `
+          <div class="text-center mb-1 w-full">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-950 border border-emerald-500/40 rounded-full text-xs font-semibold text-emerald-400">
+              <span>♻️</span> MISI 1: PEMILAHAN SAMPAH STANDAR NASIONAL (SNI 19-3983)
+            </div>
+            <p class="text-xs text-slate-300 mt-1">Layar AR MediaPipe Hands Langsung di Canvas · Visual Benda Realistis · Dual Control</p>
+          </div>
+          <div class="relative w-full max-w-2xl aspect-[16/10] sm:aspect-[16/9.5] rounded-3xl overflow-hidden border-2 border-emerald-500/60 shadow-2xl bg-slate-950 my-1">
+            <canvas id="m1Canvas" width="760" height="480" class="w-full h-full object-contain cursor-grab active:cursor-grabbing touch-none"></canvas>
+          </div>
+          <div class="grid grid-cols-3 gap-2 sm:gap-3 w-full max-w-xl mt-2">
+            <button onclick="sortWaste('organik')" class="py-2.5 px-3 rounded-xl border-2 border-emerald-500 bg-emerald-950/80 hover:bg-emerald-900 text-center cursor-pointer shadow-md transition-transform hover:scale-102">
+              <span class="text-xl block">🟢</span>
+              <span class="font-bold text-xs text-emerald-300">Tong Hijau</span>
+              <span class="text-[10px] text-slate-400 block">Organik</span>
+            </button>
+            <button onclick="sortWaste('anorganik')" class="py-2.5 px-3 rounded-xl border-2 border-amber-500 bg-amber-950/80 hover:bg-amber-900 text-center cursor-pointer shadow-md transition-transform hover:scale-102">
+              <span class="text-xl block">🟡</span>
+              <span class="font-bold text-xs text-amber-300">Tong Kuning</span>
+              <span class="text-[10px] text-slate-400 block">Anorganik</span>
+            </button>
+            <button onclick="sortWaste('b3')" class="py-2.5 px-3 rounded-xl border-2 border-rose-500 bg-rose-950/80 hover:bg-rose-900 text-center cursor-pointer shadow-md transition-transform hover:scale-102">
+              <span class="text-xl block">🔴</span>
+              <span class="font-bold text-xs text-rose-300">Tong Merah</span>
+              <span class="text-[10px] text-slate-400 block">B3 Beracun</span>
+            </button>
+          </div>
+        `;
+        setTimeout(initMission1Canvas, 50);
+      } else if (idx === 1) {
+        forestryIndex = 0;
+        renderForestryChallenge();
+      } else if (idx === 2) {
+        document.getElementById('hudMissionLabel').innerText = 'Misi 3/6: Sikap HOTS';
+        const m3Options = shuffleArray([
+          { text: 'Mengajak teman-teman bergotong royong membersihkan sampah selokan agar aliran air lancar dan tidak banjir.', isCorrect: true },
+          { text: 'Melangkah pergi meninggalkan selokan yang tersumbat karena merasa kebersihan sekolah bukan tugas giliranmu.', isCorrect: false }
+        ]);
+        stage.innerHTML = `
+          <div class="text-center mb-2">
+            <span class="text-xs font-semibold text-emerald-400 bg-emerald-950 border border-emerald-500/40 px-3 py-1 rounded-full">MISI 3: SIMULASI SIKAP ETIS KHALIFAH</span>
+            <p class="text-xs text-slate-300 mt-1">Dilema di Lingkungan Sekolah (SDN 2 Girimarto)</p>
+          </div>
+          <div class="p-5 bg-slate-800/90 border-2 border-slate-700 rounded-3xl text-left space-y-3 max-w-lg w-full shadow-2xl">
+            <div class="text-xs text-amber-400 font-bold">🏫 Saluran Selokan Depan Kelas Tersumbat Plastik</div>
+            <p class="text-xs text-slate-200">Langit mulai mendung gelap menandakan hujan deras akan turun. Selokan tersumbat sampah bungkus plastik jajanan.</p>
+            <div class="space-y-2 pt-2">
+              ${m3Options.map((opt, i) => `
+                <button onclick="answerScenario(${opt.isCorrect})" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500 text-left text-xs text-slate-200 font-semibold flex items-start gap-2.5 cursor-pointer">
+                  <span class="w-5 h-5 rounded bg-slate-800 flex items-center justify-center text-[10px] font-bold text-amber-300 shrink-0">${['A', 'B'][i]}</span>
+                  <span class="flex-1 leading-snug">${opt.text}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else if (idx === 3) {
+        document.getElementById('hudMissionLabel').innerText = 'Misi 4/6: Susun Kata 3R';
+        stage.innerHTML = `
+          <div class="text-center mb-2">
+            <span class="text-xs font-semibold text-emerald-400 bg-emerald-950 border border-emerald-500/40 px-3 py-1 rounded-full">MISI 4: SUSUN KATA PRINSIP 3R</span>
+            <p class="text-xs text-slate-300 mt-1">Susun huruf untuk prinsip: MEMAKAI KEMBALI barang bekas layak pakai!</p>
+          </div>
+          <div class="p-5 bg-slate-800/90 border-2 border-slate-700 rounded-3xl text-center space-y-3 max-w-md w-full shadow-2xl">
+            <div class="text-5xl">🔄</div>
+            <h3 class="text-base font-bold text-emerald-400">Prinsip 3R Kedua</h3>
+            <p class="text-xs text-slate-300">Memanfaatkan botol/toples bekas menjadi pot atau tempat pensil tanpa dilebur ulang.</p>
+            <div id="wordDisplay" class="flex justify-center gap-1.5 min-h-[44px]"></div>
+            <div id="letterRack" class="flex justify-center gap-1.5 flex-wrap pt-2"></div>
+          </div>
+        `;
+        initWordScramble();
+      } else if (idx === 4) {
+        document.getElementById('hudMissionLabel').innerText = 'Misi 5/6: Mesin Capit 3R';
+        stage.innerHTML = `
+          <div class="text-center mb-2">
+            <span class="text-xs font-semibold text-emerald-400 bg-emerald-950 border border-emerald-500/40 px-3 py-1 rounded-full">MISI 5: MESIN CAPIT & BANK SAMPAH</span>
+            <p class="text-xs text-slate-300 mt-1">Capit benda dan salurkan ke stasiun 3R yang tepat!</p>
+          </div>
+          <div class="p-5 bg-slate-900 border-2 border-emerald-600 rounded-3xl text-center space-y-3 max-w-lg w-full shadow-2xl">
+            <div class="text-4xl animate-bounce">🎯</div>
+            <div class="bg-slate-800 p-3 rounded-2xl border border-slate-700">
+              <span class="text-2xl block">📦</span>
+              <h4 class="font-bold text-sm text-white">Menyetor 5 Kg Botol Plastik Bersih</h4>
+              <p class="text-xs text-amber-300 font-mono mt-0.5">Nilai Daur Ulang: Rp15.000</p>
+            </div>
+            <div class="grid grid-cols-3 gap-2 pt-2">
+              <button onclick="clawStation('reduce')" class="p-2.5 bg-slate-800 border-2 border-emerald-500 rounded-xl text-xs font-bold text-emerald-300">📦 REDUCE</button>
+              <button onclick="clawStation('reuse')" class="p-2.5 bg-slate-800 border-2 border-blue-500 rounded-xl text-xs font-bold text-blue-300">🔄 REUSE</button>
+              <button onclick="clawStation('recycle')" class="p-2.5 bg-slate-800 border-2 border-amber-500 rounded-xl text-xs font-bold text-amber-300">🏭 BANK SAMPAH</button>
+            </div>
+          </div>
+        `;
+      } else if (idx === 5) {
+        document.getElementById('hudMissionLabel').innerText = 'Misi 6/6: Radar Nusantara';
+        const m6Options = shuffleArray([
+          { text: 'Melakukan reboisasi pohon keras di hulu DAS Keduang dan membuat terasering guna mencegah erosi lumpur ke waduk.', isCorrect: true },
+          { text: 'Menebangi semua pohon perbukitan hulu untuk dijadikan lahan parkir dan membiarkan tanah terbuka terkena hujan.', isCorrect: false },
+          { text: 'Menutup seluruh saluran pintu air waduk ke areal sawah petani agar kapasitas tampungan waduk tidak berkurang.', isCorrect: false }
+        ]);
+        stage.innerHTML = `
+          <div class="text-center mb-2">
+            <span class="text-xs font-semibold text-emerald-400 bg-emerald-950 border border-emerald-500/40 px-3 py-1 rounded-full">MISI 6: PETA RADAR KRISIS NUSANTARA</span>
+            <p class="text-xs text-slate-300 mt-1">Konservasi Waduk Gajah Mungkur (Wonogiri, Jawa Tengah)</p>
+          </div>
+          <div class="p-5 bg-slate-800/90 border-2 border-emerald-500/80 rounded-3xl text-left space-y-3 max-w-lg w-full shadow-2xl">
+            <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+              <span>📍 Titik #2: Wonogiri (Jateng)</span>
+            </div>
+            <p class="text-xs text-slate-200">Erosi tanah di lahan hulu DAS Keduang membawa sedimentasi lumpur yang mengancam daya tampung Waduk Gajah Mungkur.</p>
+            <a href="https://regional.kompas.com" target="_blank" rel="noopener noreferrer" class="inline-block text-xs font-bold text-cyan-400 underline">📰 Baca Referensi Kompas Regional Jateng ↗</a>
+            <div class="space-y-2 pt-2">
+              ${m6Options.map((opt, i) => `
+                <button onclick="resolveHotspot(${opt.isCorrect})" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500 text-left text-xs text-slate-200 font-semibold flex items-start gap-2.5 cursor-pointer">
+                  <span class="w-5 h-5 rounded bg-slate-800 flex items-center justify-center text-[10px] font-bold text-cyan-300 shrink-0">${['A', 'B', 'C'][i]}</span>
+                  <span class="flex-1 leading-snug">${opt.text}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Pedagogical Mission Data for Evaluation Modal
+    const MISSION_PEDAGOGY = [
+      {
+        title: 'Misi 1: Pemilahan Sampah SNI (Standar Nasional Indonesia)',
+        badge: 'Pakar Pemilah SNI',
+        reflection: 'Kamu berhasil mengklasifikasikan sampah organik, anorganik, dan limbah B3 beracun. Mengetahui plastik butuh ±450 tahun terurai melatih nalar kritis membatasi penggunaan plastik sekali pakai.'
+      },
+      {
+        title: 'Misi 2: Aksi Reforestasi & Perawatan Pohon',
+        badge: 'Sahabat Pohon Rimbun',
+        reflection: 'Tahapan penyiraman air lalu pemupukan kompos berhasil menyuburkan bibit layu. Aksi nyata penghijauan mencegah erosi tanah dan bencana longsor.'
+      },
+      {
+        title: 'Misi 3: Simulasi Sikap Etis Khalifah fil Ardh (HOTS)',
+        badge: 'Khalifah Berakhlak Mulia',
+        reflection: 'Kamu memilih solusi terpuji di lingkungan sekolah. Gotong royong membersihkan selokan dan merawat fasilitas umum adalah wujud nyata ibadah menjaga bumi ciptaan Tuhan.'
+      },
+      {
+        title: 'Misi 4: Susun Kata Kunci Prinsip 3R',
+        badge: 'Master Konsep 3R',
+        reflection: 'Berhasil menguasai konsep Reduce, Reuse, Recycle. Mengurangi dan memanfaatkan kembali barang bekas menekan timbunan sampah dari sumbernya.'
+      },
+      {
+        title: 'Misi 5: Mesin Capit 3R & Tabungan Bank Sampah',
+        badge: 'Pelopor Bank Sampah',
+        reflection: 'Menyetor barang pilahan ke Bank Sampah melatih literasi numerasi finansial sekaligus circular economy yang berdaya guna bagi lingkungan dan masyarakat.'
+      },
+      {
+        title: 'Misi 6: Radar Nusantara & Krisis Ekologi Aktual',
+        badge: 'Penjaga Nusantara Utama',
+        reflection: 'Menganalisis krisis sedimentasi Waduk Gajah Mungkur Wonogiri dan titik krisis lainnya membuktikan pentingnya kepedulian lingkungan berbasis data sains dan jurnalisme terpercaya.'
+      }
+    ];
+
+    function showMissionComplete(missionIdx) {
+      clearInterval(timerInterval);
+      playBeep('success');
+
+      const ped = MISSION_PEDAGOGY[missionIdx] || MISSION_PEDAGOGY[0];
+      document.getElementById('mcMissionTitle').innerText = ped.title;
+      document.getElementById('mcBadge').innerText = '🏅 ' + ped.badge;
+      document.getElementById('mcReflection').innerText = ped.reflection;
+      document.getElementById('mcScore').innerText = score;
+      document.getElementById('mcEarthHealth').innerText = Math.round(earthHealth) + '%';
+      document.getElementById('mcTime').innerText = timerSeconds + ' dtk';
+      document.getElementById('mcLives').innerText = '❤️'.repeat(Math.max(1, lives));
+
+      // Calculate Rank S / A / B
+      let rank = 'A';
+      let stars = '⭐⭐⭐';
+      let desc = 'Sangat Bagus! Aksi ramah lingkunganmu berdampak besar!';
+      if (lives >= 3 && earthHealth >= 50) {
+        rank = 'S';
+        stars = '⭐⭐⭐';
+        desc = 'Sempurna! Kamu pantas menjadi Duta Khalifah Lingkungan!';
+      } else if (lives <= 1 || earthHealth < 40) {
+        rank = 'B';
+        stars = '⭐⭐';
+        desc = 'Cukup Baik! Terus tingkatkan kepedulian dan ketelitianmu!';
+      }
+      document.getElementById('mcRankLetter').innerText = rank;
+      document.getElementById('mcStars').innerText = stars;
+      document.getElementById('mcRankDesc').innerText = desc;
+
+      const nextBtn = document.getElementById('mcNextBtn');
+      if (missionIdx >= 5) {
+        nextBtn.innerText = '🏆 Lihat Hasil Akhir & Sertifikat';
+      } else {
+        nextBtn.innerText = '🚀 Lanjut ke Misi ' + (missionIdx + 2);
+      }
+
+      document.getElementById('missionCompleteModal').classList.remove('hidden');
+    }
+
+    function proceedNextMission() {
+      closeModal('missionCompleteModal');
+      if (currentMission < 5) {
+        currentMission++;
+        updateHud();
+        loadMission(currentMission);
+        startTimer();
+      } else {
+        earthHealth = 100;
+        document.getElementById('victoryScore').innerText = score;
+        document.getElementById('victorySavings').innerText = 'Rp' + bankSavings.toLocaleString('id-ID');
+        document.getElementById('gameplayScreen').classList.add('hidden');
+        document.getElementById('gameplayHud').classList.add('hidden');
+        document.getElementById('victoryScreen').classList.remove('hidden');
+      }
+    }
+
+    function retryCurrentMission() {
+      closeModal('missionCompleteModal');
+      updateHud();
+      loadMission(currentMission);
+      startTimer();
+    }
+
+    // Handlers
+    function sortWaste(bin) {
+      if (m1EnteringAnim) return;
+      const cvs = document.getElementById('m1Canvas');
+      const w = cvs ? cvs.width : 760;
+      const h = cvs ? cvs.height : 480;
+
+      const binX = (bin === 'organik') ? w * 0.2 : (bin === 'anorganik') ? w * 0.5 : w * 0.8;
+      const binY = h - 75;
+      const targetMouthY = binY - 110 / 2 + 12;
+
+      playBeep('suck');
+
+      m1EnteringAnim = {
+        chosenBin: bin,
+        startX: m1ItemPos.x,
+        startY: m1ItemPos.y,
+        targetX: binX,
+        targetY: targetMouthY,
+        startTime: performance.now(),
+        duration: 700,
+        isCorrect: (bin === 'anorganik'),
+        hasImpacted: false
+      };
+      m1ItemPos.isDragging = false;
+      m1MousePos.isDown = false;
+    }
+
+    // Level 2: Forestry Objects & Tool Matching (Klinik Dokter Pohon - 6 Situasi Autentik)
+    const FORESTRY_OBJECTS = [
+      {
+        id: 1,
+        title: 'Bibit Pohon Jati Dehidrasi Akut (Kemarau Wonogiri)',
+        desc: 'Tanah petak retak-retak gersang dan daun bibit jati layu terkulai akibat kemarau panjang tanpa hujan.',
+        icon: '🥀',
+        diagnosis: 'Dehidrasi Akut & Tanah Rekah',
+        correct: 'air',
+        feedback: 'Air bersih meresap ke zona perakaran bibit jati dan mengembalikan kesegaran sel daun!'
+      },
+      {
+        id: 2,
+        title: 'Bibit Pohon Mahoni Daun Menguning / Klorosis',
+        desc: 'Tanah tandus kekurangan humus. Daun bibit mahoni memucat kekuningan (klorosis defisiensi N-P-K).',
+        icon: '🍂',
+        diagnosis: 'Klorosis Defisiensi Unsur Hara',
+        correct: 'kompos',
+        feedback: 'Pupuk kompos kaya cacing tanah menyuburkan tanah alami tanpa polusi kimia!'
+      },
+      {
+        id: 3,
+        title: 'Pohon Trembesi Muda Dibelit Gulma & Alang-Alang',
+        desc: 'Rumput alang-alang liar dan sulur parasit melilit batang pohon muda, merampas air dan hara.',
+        icon: '🌾',
+        diagnosis: 'Invasif Gulma Liar Mencekik Akar',
+        correct: 'sekop',
+        feedback: 'Penyiangan gulma membersihkan perakaran sehingga trembesi bebas tumbuh menyerap emisi CO₂!'
+      },
+      {
+        id: 4,
+        title: 'Bibit Meranti Diserang Kutu Daun & Hama Penggerek',
+        desc: 'Ratusan kutu daun dan ulat memakan pucuk meranti muda hingga berlubang dan menghambat fotosintesis.',
+        icon: '🐛',
+        diagnosis: 'Investasi Koloni Hama Kutu Daun',
+        correct: 'semprotan',
+        feedback: 'Pestisida nabati mengusir hama alami tanpa meracuni lebah penyerbuk dan air tanah!'
+      },
+      {
+        id: 5,
+        title: 'Bibit Beringin Muda Miring Condong Diterjang Badai',
+        desc: 'Hembusan badai angin kencang membuat bibit condong 25 derajat dan akar tunggangnya terancam longgar.',
+        icon: '💨',
+        diagnosis: 'Batang Miring Diterjang Badai',
+        correct: 'ajir',
+        feedback: 'Ajir bambu menstabilkan posisi batang dari angin kencang hingga akar menancap kokoh!'
+      },
+      {
+        id: 6,
+        title: 'Ranting Bibit Damar Patah & Mengering Terinfeksi Jamur',
+        desc: 'Ranting samping patah terkulai dan mulai timbul bercak jamur busuk yang berbahaya jika menular.',
+        icon: '✂️',
+        diagnosis: 'Patah Ranting Infeksi Jamur',
+        correct: 'gunting',
+        feedback: 'Pemangkasan tepat memotong ranting berpenyakit dan memusatkan energi ke pucuk sehat!'
+      }
+    ];
+
+    let forestryIndex = 0;
+    function renderForestryChallenge() {
+      const item = FORESTRY_OBJECTS[forestryIndex];
+      const stage = document.getElementById('missionStage');
+      if (!stage || !item) return;
+
+      document.getElementById('hudMissionLabel').innerText = 'Misi 2/6: Dokter Pohon (' + (forestryIndex + 1) + '/' + FORESTRY_OBJECTS.length + ')';
+      stage.innerHTML = `
+        <div class="text-center mb-1 w-full">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-950 border border-emerald-500/40 rounded-full text-xs font-semibold text-emerald-400">
+            <span>🩺</span> KLINIK DOKTER POHON & KONSERVASI (Situasi ${forestryIndex + 1}/${FORESTRY_OBJECTS.length})
+          </div>
+          <h3 class="text-xs sm:text-sm font-bold text-white mt-1">Benda Muncul Satu per Satu — Analisis Gejala & Ambil Alat yang Tepat!</h3>
+        </div>
+        <div class="relative w-full max-w-2xl aspect-[16/10] sm:aspect-[16/9.5] rounded-3xl overflow-hidden border-2 border-cyan-500/60 shadow-2xl bg-slate-950 my-1">
+          <canvas id="m2Canvas" width="760" height="480" class="w-full h-full object-contain cursor-grab active:cursor-grabbing touch-none"></canvas>
+          <div class="absolute top-2.5 right-2.5 max-w-[240px] bg-slate-900/85 backdrop-blur-md border border-slate-700/80 rounded-xl p-2 text-xs shadow-xl hidden sm:block text-left">
+            <div class="flex items-center justify-between text-amber-400 font-bold text-[11px] mb-0.5">
+              <span>🩺 Diagnosis:</span>
+              <span class="bg-amber-950 px-1.5 py-0.2 rounded border border-amber-500/50">${item.diagnosis}</span>
+            </div>
+            <p class="text-[10px] text-slate-300 leading-tight">${item.desc}</p>
+          </div>
+        </div>
+
+        <div class="w-full max-w-xl mt-2">
+          <span class="text-[11px] font-bold text-slate-300 block text-center mb-1">🧰 Rak Peralatan Konservasi (Klik atau Seret Alat ke Pohon):</span>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button onclick="careTree('air')" class="p-2 bg-slate-800 border-2 border-cyan-500/80 rounded-xl text-center hover:bg-slate-700 cursor-pointer shadow">
+              <span class="text-xl block">💧</span>
+              <span class="text-xs font-bold text-cyan-300">Gembor Air</span>
+              <span class="text-[9px] text-slate-400 block leading-tight">Siram dehidrasi</span>
+            </button>
+            <button onclick="careTree('kompos')" class="p-2 bg-slate-800 border-2 border-emerald-500/80 rounded-xl text-center hover:bg-slate-700 cursor-pointer shadow">
+              <span class="text-xl block">🌱</span>
+              <span class="text-xs font-bold text-emerald-300">Pupuk Kompos</span>
+              <span class="text-[9px] text-slate-400 block leading-tight">Nutrisi hara</span>
+            </button>
+            <button onclick="careTree('sekop')" class="p-2 bg-slate-800 border-2 border-amber-500/80 rounded-xl text-center hover:bg-slate-700 cursor-pointer shadow">
+              <span class="text-xl block">🧑‍🌾</span>
+              <span class="text-xs font-bold text-amber-300">Sekop Gulma</span>
+              <span class="text-[9px] text-slate-400 block leading-tight">Cabut parasit</span>
+            </button>
+            <button onclick="careTree('semprotan')" class="p-2 bg-slate-800 border-2 border-teal-500/80 rounded-xl text-center hover:bg-slate-700 cursor-pointer shadow">
+              <span class="text-xl block">🌿</span>
+              <span class="text-xs font-bold text-teal-300">Pestisida Nabati</span>
+              <span class="text-[9px] text-slate-400 block leading-tight">Basmi hama</span>
+            </button>
+            <button onclick="careTree('ajir')" class="p-2 bg-slate-800 border-2 border-lime-500/80 rounded-xl text-center hover:bg-slate-700 cursor-pointer shadow">
+              <span class="text-xl block">🎋</span>
+              <span class="text-xs font-bold text-lime-300">Ajir Bambu</span>
+              <span class="text-[9px] text-slate-400 block leading-tight">Tegakkan batang</span>
+            </button>
+            <button onclick="careTree('gunting')" class="p-2 bg-slate-800 border-2 border-green-500/80 rounded-xl text-center hover:bg-slate-700 cursor-pointer shadow">
+              <span class="text-xl block">✂️</span>
+              <span class="text-xs font-bold text-green-300">Gunting Pruning</span>
+              <span class="text-[9px] text-slate-400 block leading-tight">Pangkas busuk</span>
+            </button>
+            <button onclick="careTree('kapak')" class="p-2 bg-slate-900 border-2 border-rose-500/50 rounded-xl text-center hover:bg-rose-950/40 cursor-pointer">
+              <span class="text-xl block">🪓</span>
+              <span class="text-xs font-bold text-rose-400">Kapak Liar</span>
+              <span class="text-[9px] text-rose-300/70 block leading-tight">Penebangan Liar</span>
+            </button>
+            <button onclick="careTree('api')" class="p-2 bg-slate-900 border-2 border-rose-500/50 rounded-xl text-center hover:bg-rose-950/40 cursor-pointer">
+              <span class="text-xl block">🔥</span>
+              <span class="text-xs font-bold text-rose-400">Api Bakar</span>
+              <span class="text-[9px] text-rose-300/70 block leading-tight">Kebakaran Hutan</span>
+            </button>
+          </div>
+        </div>
+      `;
+      setTimeout(initMission2Canvas, 50);
+    }
+
+    function careTree(tool) {
+      if (tool === 'kapak') {
+        playBeep('error');
+        lives--;
+        showToast(false, 'BAHAYA PENEBANGAN LIAR!', 'Menebang bibit pohon merusak ekosistem hutan nusantara dan memicu longsor!');
+        updateHud();
+        return;
+      }
+      if (tool === 'api') {
+        playBeep('error');
+        lives--;
+        showToast(false, 'BAHAYA KEBAKARAN HUTAN!', 'Membakar lahan memusnahkan hara mikroba tanah dan memicu kabut asap ISPA!');
+        updateHud();
+        return;
+      }
+
+      const current = FORESTRY_OBJECTS[forestryIndex];
+      if (tool === current.correct) {
+        playBeep('success');
+        score += 120;
+        earthHealth = Math.min(100, earthHealth + 8);
+        updateHud();
+        showToast(true, 'ALAT TEPAT!', current.feedback);
+
+        document.getElementById('treeGraphic').innerText = '🌳✨';
+        document.getElementById('treeTitle').innerText = 'Pohon Berhasil Dirawat Subur!';
+        const sBanner = document.getElementById('treeSuccessBanner');
+        if (sBanner) {
+          sBanner.innerText = '🎉 Berhasil Pulih! ' + current.feedback;
+          sBanner.classList.remove('hidden');
+        }
+
+        setTimeout(() => {
+          if (forestryIndex + 1 < FORESTRY_OBJECTS.length) {
+            forestryIndex++;
+            renderForestryChallenge();
+          } else {
+            showMissionComplete(1);
+          }
+        }, 1400);
+      } else {
+        playBeep('error');
+        lives--;
+        let errMsg = 'Alat ini kurang tepat untuk mengatasi masalah bibit saat ini!';
+        if (current.correct === 'air') errMsg = 'Tanah kering retak dehidrasi parah. Ambil 💧 Gembor Air Bersih!';
+        if (current.correct === 'kompos') errMsg = 'Daun menguning (klorosis) butuh nutrisi hara 🌱 Pupuk Kompos Organik!';
+        if (current.correct === 'sekop') errMsg = 'Akar tercekik rumput parasit. Gunakan 🧑‍🌾 Sekop Penyiang Gulma!';
+        if (current.correct === 'semprotan') errMsg = 'Daun diserang hama serangga. Semprotkan 🌿 Pestisida Nabati!';
+        if (current.correct === 'ajir') errMsg = 'Batang miring tertiup badai. Tegakkan dengan 🎋 Ajir Bambu!';
+        if (current.correct === 'gunting') errMsg = 'Ranting patah membusuk harus dipotong dengan ✂️ Gunting Pruning!';
+        showToast(false, 'ALAT KURANG SESUAI!', errMsg);
+        updateHud();
+      }
+    }
+
+    function answerScenario(isCorrect) {
+      if (isCorrect) {
+        playBeep('success');
+        score += 120;
+        earthHealth = Math.min(100, earthHealth + 8);
+        updateHud();
+        showToast(true, 'SIKAP KHALIFAH TELADAN!', 'Gotong royong membersihkan selokan mencegah banjir.');
+        setTimeout(() => showMissionComplete(2), 1200);
+      } else {
+        playBeep('error');
+        lives--;
+        showToast(false, 'APATIS!', 'Menjaga sekolah adalah kewajiban seluruh warga sekolah.');
+        updateHud();
+      }
+    }
+
+    // Word Scramble Logic
+    const targetWord = 'REUSE';
+    let currentSelectedLetters = [];
+    function initWordScramble() {
+      currentSelectedLetters = [];
+      const scrambled = ['U', 'R', 'E', 'S', 'E'];
+      renderWordScramble(scrambled);
+    }
+
+    function renderWordScramble(scrambled) {
+      const display = document.getElementById('wordDisplay');
+      const rack = document.getElementById('letterRack');
+      if (!display || !rack) return;
+
+      display.innerHTML = '';
+      for (let i = 0; i < targetWord.length; i++) {
+        const char = currentSelectedLetters[i] || '';
+        display.innerHTML += `<div class="w-9 h-10 rounded-lg border-2 border-emerald-500 bg-slate-900 flex items-center justify-center font-bold text-white text-base">${char}</div>`;
+      }
+
+      rack.innerHTML = '';
+      scrambled.forEach((c, idx) => {
+        rack.innerHTML += `<button onclick="pickLetter('${c}', this)" class="w-8 h-9 rounded-lg bg-slate-700 text-white font-bold text-sm shadow hover:bg-slate-600">${c}</button>`;
+      });
+    }
+
+    function pickLetter(char, btn) {
+      playBeep('click');
+      currentSelectedLetters.push(char);
+      btn.style.visibility = 'hidden';
+      const display = document.getElementById('wordDisplay');
+      if (display) {
+        display.innerHTML = '';
+        for (let i = 0; i < targetWord.length; i++) {
+          const c = currentSelectedLetters[i] || '';
+          display.innerHTML += `<div class="w-9 h-10 rounded-lg border-2 border-emerald-500 bg-slate-900 flex items-center justify-center font-bold text-white text-base">${c}</div>`;
+        }
+      }
+
+      if (currentSelectedLetters.length === targetWord.length) {
+        const formed = currentSelectedLetters.join('');
+        if (formed === targetWord) {
+          playBeep('success');
+          score += 120;
+          earthHealth = Math.min(100, earthHealth + 8);
+          updateHud();
+          showToast(true, 'KATA TEPAT: REUSE!', 'Prinsip kedua 3R: Menggunakan kembali barang bekas.');
+          setTimeout(() => showMissionComplete(3), 1200);
+        } else {
+          playBeep('error');
+          showToast(false, 'KATA BELUM TEPAT', 'Coba susun ulang kata REUSE!');
+          setTimeout(initWordScramble, 800);
+        }
+        updateHud();
+      }
+    }
+
+    function clawStation(station) {
+      if (station === 'recycle') {
+        playBeep('success');
+        score += 150;
+        bankSavings += 15000;
+        earthHealth = Math.min(100, earthHealth + 8);
+        updateHud();
+        showToast(true, 'SETORAN DITERIMA!', '5 Kg botol PET menambah tabungan Rp15.000!');
+        setTimeout(() => showMissionComplete(4), 1200);
+      } else {
+        playBeep('error');
+        showToast(false, 'KURANG TEPAT', 'Botol plastik untuk pabrik daur ulang masuk ke Bank Sampah (Recycle).');
+      }
+      updateHud();
+    }
+
+    function resolveHotspot(isCorrect) {
+      if (isCorrect) {
+        playBeep('success');
+        score += 150;
+        earthHealth = 100;
+        updateHud();
+        showToast(true, 'SOLUSI TERBAIK!', 'Terasering & tanaman keras menahan erosi Waduk Wonogiri.');
+        setTimeout(() => showMissionComplete(5), 1200);
+      } else {
+        playBeep('error');
+        lives--;
+        showToast(false, 'MEMBAHAYAKAN!', 'Penebangan lereng memicu bencana longsor ke waduk!');
+        updateHud();
+      }
+    }
+
+    // 5. High-Resolution Certificate Generator (2000x1414)
+    function renderCertCanvas() {
+      const cvs = document.getElementById('certCanvas');
+      if (!cvs) return;
+      const ctx = cvs.getContext('2d');
+      const w = 2000, h = 1414;
+      cvs.width = w; cvs.height = h;
+
+      ctx.fillStyle = '#FCFBF7';
+      ctx.fillRect(0, 0, w, h);
+
+      // Borders
+      ctx.strokeStyle = '#047857'; ctx.lineWidth = 28;
+      ctx.strokeRect(40, 40, w - 80, h - 80);
+      ctx.strokeStyle = '#D97706'; ctx.lineWidth = 6;
+      ctx.strokeRect(65, 65, w - 130, h - 130);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#065F46'; ctx.font = 'bold 34px sans-serif';
+      ctx.fillText('PERSATUAN GURU REPUBLIK INDONESIA (PGRI) KABUPATEN WONOGIRI', w / 2, 180);
+
+      ctx.fillStyle = '#D97706'; ctx.font = '900 68px sans-serif';
+      ctx.fillText('SERTIFIKAT PENGHARGAAN', w / 2, 310);
+
+      ctx.fillStyle = '#065F46'; ctx.font = 'bold 36px sans-serif';
+      ctx.fillText('PENJAGA BUMI NUSANTARA', w / 2, 370);
+
+      ctx.fillStyle = '#475569'; ctx.font = 'italic 26px sans-serif';
+      ctx.fillText('Diberikan kepada peserta didik teladan:', w / 2, 450);
+
+      const sName = document.getElementById('certStudentInput').value || 'Ananda Khalifah';
+      ctx.fillStyle = '#0F172A'; ctx.font = '900 76px sans-serif';
+      ctx.fillText(sName.toUpperCase(), w / 2, 550);
+
+      const sSchool = document.getElementById('certSchoolInput').value || 'SDN 2 Girimarto';
+      ctx.fillStyle = '#047857'; ctx.font = 'bold 36px sans-serif';
+      ctx.fillText('Asal Sekolah: ' + sSchool, w / 2, 630);
+
+      ctx.fillStyle = '#065F46'; ctx.fillRect(w / 2 - 500, 750, 1000, 75);
+      ctx.fillStyle = '#FEF08A'; ctx.font = 'bold 38px sans-serif';
+      ctx.fillText('★ KHALIFAH CILIK TELADAN PELESTARI LINGKUNGAN ★', w / 2, 802);
+
+      // Signature Block
+      const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      ctx.fillStyle = '#334155'; ctx.font = '24px sans-serif';
+      ctx.fillText('Wonogiri, ' + today, w - 420, 1140);
+      ctx.fillText('Pendidik & Pengembang Game,', w - 420, 1175);
+
+      ctx.fillStyle = '#0F172A'; ctx.font = 'bold 30px sans-serif';
+      ctx.fillText('BACHTIAR IMANI, S.Pd.', w - 420, 1265);
+      ctx.fillStyle = '#047857'; ctx.font = 'bold 22px sans-serif';
+      ctx.fillText('SDN 2 Girimarto · PGRI Cabang Girimarto', w - 420, 1295);
+    }
+
+    function downloadCertificate() {
+      const cvs = document.getElementById('certCanvas');
+      if (!cvs) return;
+      const dataUrl = cvs.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.download = 'Sertifikat_Penjaga_Bumi.png';
+      a.href = dataUrl;
+      a.click();
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+      if (id === 'certificateModal') renderCertCanvas();
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function toggleElement(id) {
+      const el = document.getElementById(id);
+      el.classList.toggle('hidden');
+    }
+
+    function setEduTab(n) {
+      [1, 2, 3].forEach(i => {
+        document.getElementById('eduTab' + i).classList.add('hidden');
+        document.getElementById('eduTabBtn' + i).className = 'py-2.5 px-3 font-semibold border-b-2 border-transparent text-slate-400';
+      });
+      document.getElementById('eduTab' + n).classList.remove('hidden');
+      document.getElementById('eduTabBtn' + n).className = 'py-2.5 px-3 font-semibold border-b-2 border-emerald-500 text-emerald-400';
+    }
+
+    // ==================== MEDIAPIPE HANDS AR & REALISTIC CANVAS ENGINE (DUAL CONTROL) ====================
+    let arCameraActive = false;
+    let htmlVideoElem = null;
+    let htmlCameraStream = null;
+    let htmlHandsInstance = null;
+    let htmlHandState = { isDetected: false, isGrabbing: false, x: 0.5, y: 0.5, landmarks: null };
+    let m1AnimId = null;
+    let m2AnimId = null;
+
+    const HAND_CONNECTIONS_HTML = [
+      [0, 1], [1, 2], [2, 3], [3, 4],
+      [0, 5], [5, 6], [6, 7], [7, 8],
+      [5, 9], [9, 10], [10, 11], [11, 12],
+      [9, 13], [13, 14], [14, 15], [15, 16],
+      [13, 17], [17, 18], [18, 19], [19, 20],
+      [0, 17]
+    ];
+
+    async function startHtmlCamera() {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showToast(false, 'KAMERA TIDAK DIDUKUNG', 'Mode sentuh/mouse tetap aktif!');
+          return;
+        }
+
+        if (!htmlHandsInstance && window.Hands) {
+          htmlHandsInstance = new window.Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+          });
+          htmlHandsInstance.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+          });
+          htmlHandsInstance.onResults((results) => {
+            if (results && results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+              const lm = results.multiHandLandmarks[0];
+              const thumb = lm[4];
+              const index = lm[8];
+              const dx = thumb.x - index.x;
+              const dy = thumb.y - index.y;
+              const dist = Math.hypot(dx, dy);
+
+              htmlHandState.isDetected = true;
+              htmlHandState.landmarks = lm;
+              htmlHandState.x = 1 - (thumb.x + index.x) / 2; // mirrored
+              htmlHandState.y = (thumb.y + index.y) / 2;
+
+              if (dist < 0.085) {
+                htmlHandState.isGrabbing = true;
+              } else if (dist > 0.125) {
+                htmlHandState.isGrabbing = false;
+              }
+            } else {
+              htmlHandState.isDetected = false;
+              htmlHandState.landmarks = null;
+            }
+          });
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false
+        });
+        htmlCameraStream = stream;
+
+        if (!htmlVideoElem) {
+          htmlVideoElem = document.createElement('video');
+          htmlVideoElem.playsInline = true;
+          htmlVideoElem.muted = true;
+          htmlVideoElem.autoplay = true;
+        }
+        htmlVideoElem.srcObject = stream;
+        await htmlVideoElem.play();
+
+        arCameraActive = true;
+        updateArButtonUI();
+        showToast(true, 'AR KAMERA AKTIF!', 'Arahkan tanganmu ke kamera. Jepit telunjuk & jempol untuk mengambil benda!');
+
+        let isProcessing = false;
+        const processLoop = async () => {
+          if (!arCameraActive || !htmlVideoElem || htmlVideoElem.paused) return;
+          if (!isProcessing && htmlHandsInstance && htmlVideoElem.readyState >= 2) {
+            isProcessing = true;
+            try {
+              await htmlHandsInstance.send({ image: htmlVideoElem });
+            } catch (e) {}
+            isProcessing = false;
+          }
+          requestAnimationFrame(processLoop);
+        };
+        requestAnimationFrame(processLoop);
+
+      } catch (err) {
+        console.warn('Camera stream error:', err);
+        arCameraActive = false;
+        updateArButtonUI();
+        showToast(false, 'IZIN KAMERA DITOLAK', 'Mode sentuh & mouse tetap dapat dimainkan tanpa kendala!');
+      }
+    }
+
+    function stopHtmlCamera() {
+      arCameraActive = false;
+      if (htmlCameraStream) {
+        htmlCameraStream.getTracks().forEach(t => t.stop());
+        htmlCameraStream = null;
+      }
+      if (htmlVideoElem) htmlVideoElem.srcObject = null;
+      htmlHandState.isDetected = false;
+      htmlHandState.landmarks = null;
+      updateArButtonUI();
+      showToast(false, 'AR KAMERA NONAKTIF', 'Beralih ke tampilan grafis bersih.');
+    }
+
+    function updateArButtonUI() {
+      const btn = document.getElementById('btnAR');
+      if (btn) {
+        btn.className = arCameraActive
+          ? 'p-1.5 sm:px-2 sm:py-1 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 shadow-md animate-pulse'
+          : 'p-1.5 sm:px-2 sm:py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700';
+        btn.innerHTML = arCameraActive ? '📷 AR: AKTIF' : '📷 AR';
+      }
+    }
+
+    function toggleAR() {
+      if (arCameraActive) {
+        stopHtmlCamera();
+      } else {
+        startHtmlCamera();
+      }
+    }
+
+    function drawMediaPipeHandOnCanvas(ctx, lm, isGrabbing, w, h) {
+      if (!lm) return;
+      ctx.save();
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = isGrabbing ? 'rgba(251, 191, 36, 0.9)' : 'rgba(16, 185, 129, 0.8)';
+      ctx.shadowColor = isGrabbing ? '#fbbf24' : '#10b981';
+      ctx.shadowBlur = 10;
+
+      for (const [start, end] of HAND_CONNECTIONS_HTML) {
+        const p1 = { x: (1 - lm[start].x) * w, y: lm[start].y * h };
+        const p2 = { x: (1 - lm[end].x) * w, y: lm[end].y * h };
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < lm.length; i++) {
+        const px = (1 - lm[i].x) * w;
+        const py = lm[i].y * h;
+        const isFingertip = [4, 8, 12, 16, 20].includes(i);
+        ctx.beginPath();
+        ctx.arc(px, py, isFingertip ? 5.5 : 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = isFingertip ? (isGrabbing ? '#fef08a' : '#67e8f9') : '#34d399';
+        ctx.fill();
+      }
+
+      // Reticle
+      const pThumb = { x: (1 - lm[4].x) * w, y: lm[4].y * h };
+      const pIndex = { x: (1 - lm[8].x) * w, y: lm[8].y * h };
+      const midX = (pThumb.x + pIndex.x) / 2;
+      const midY = (pThumb.y + pIndex.y) / 2;
+
+      ctx.beginPath();
+      ctx.arc(midX, midY, isGrabbing ? 22 : 16, 0, Math.PI * 2);
+      ctx.lineWidth = isGrabbing ? 3 : 2;
+      ctx.strokeStyle = isGrabbing ? '#fbbf24' : '#10b981';
+      ctx.stroke();
+
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#000';
+      ctx.shadowBlur = 4;
+      ctx.fillText(isGrabbing ? '✊ JEPIT AKTIF' : 'Jepit Jempol & Telunjuk', midX, midY - 22);
+      ctx.restore();
+    }
+
+    // Realistic Waste Drawing
+    function drawRealisticWasteItemHtml(ctx, x, y, size) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 14;
+
+      // Realistic Translucent Mineral Water Bottle (PET 1)
+      const scale = size / 100;
+      ctx.scale(scale, scale);
+
+      // Blue Cap
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.roundRect(-9, -46, 18, 9, 2);
+      ctx.fill();
+
+      // Translucent Body
+      const bodyGrad = ctx.createLinearGradient(-18, 0, 18, 0);
+      bodyGrad.addColorStop(0, 'rgba(186, 230, 253, 0.65)');
+      bodyGrad.addColorStop(0.25, 'rgba(255, 255, 255, 0.9)');
+      bodyGrad.addColorStop(0.6, 'rgba(186, 230, 253, 0.45)');
+      bodyGrad.addColorStop(1, 'rgba(56, 189, 248, 0.85)');
+
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.roundRect(-17, -22, 34, 62, [3, 3, 7, 7]);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(14, 165, 233, 0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Ribs
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.lineWidth = 1.5;
+      for (const ry of [-10, 0, 10, 20]) {
+        ctx.beginPath();
+        ctx.moveTo(-13, ry);
+        ctx.lineTo(13, ry);
+        ctx.stroke();
+      }
+
+      // Label
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.85)';
+      ctx.fillRect(-16, -2, 32, 14);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('PET 1 ♻', 0, 8);
+
+      ctx.restore();
+    }
+
+    // Realistic SNI Bin Drawing with 3D Layered Depth (Back cavity & Front Hull separation)
+    function drawRealisticSniBinHtml(ctx, x, y, w, h, type, opts, explicitLayer) {
+      const options = typeof opts === 'boolean'
+        ? { isHovered: opts, layer: explicitLayer || 'all' }
+        : { isHovered: false, lidOpen: 0, bounceX: 1.0, bounceY: 1.0, layer: 'all', ...opts };
+
+      const isHovered = options.isHovered || false;
+      const lidOpen = options.lidOpen || 0;
+      const bounceX = options.bounceX || 1.0;
+      const bounceY = options.bounceY || 1.0;
+      const layer = explicitLayer || options.layer || 'all';
+
+      const colors = {
+        organik: { dark: '#064e3b', main: '#047857', light: '#10b981', border: '#34d399', label: 'ORGANIK', icon: '🌱', sub: 'Sisa Alam & Makanan' },
+        anorganik: { dark: '#78350f', main: '#d97706', light: '#f59e0b', border: '#fbbf24', label: 'ANORGANIK', icon: '♻', sub: 'Plastik, Kertas, Logam' },
+        b3: { dark: '#7f1d1d', main: '#b91c1c', light: '#ef4444', border: '#f87171', label: 'B3 BERACUN', icon: '☣', sub: 'Baterai, Lampu, Racun' }
+      }[type];
+
+      const rx = w / 2;
+      const ry = 14;
+      const rxBase = w * 0.38;
+      const yRim = -h / 2 + 12;
+      const yBase = h / 2 - 4;
+
+      // ==========================================
+      // LAYER 1: BACK (Cavity, Shadow, Open Lid)
+      // ==========================================
+      if (layer === 'back' || layer === 'all') {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.translate(0, yBase);
+        ctx.scale(bounceX, bounceY);
+        ctx.translate(0, -yBase);
+
+        // Ground Contact Shadow
+        ctx.beginPath();
+        ctx.ellipse(0, yBase + 4, rxBase * 1.35 * bounceX, 9, 0, 0, Math.PI * 2);
+        const shadow = ctx.createRadialGradient(0, yBase + 4, 3, 0, yBase + 4, rxBase * 1.35);
+        shadow.addColorStop(0, 'rgba(0, 0, 0, 0.55)');
+        shadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = shadow;
+        ctx.fill();
+
+        // Hinges
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-w * 0.26 - 4, yRim - ry - 4, 8, 7);
+        ctx.fillRect(w * 0.26 - 4, yRim - ry - 4, 8, 7);
+
+        // 3D Tilted Open Lid
+        const effectiveLid = Math.max(0, Math.min(1, lidOpen + (isHovered ? 0.35 : 0)));
+        if (effectiveLid > 0.05) {
+          const lidLift = effectiveLid * 26;
+          const lidH = ry * 2.2 * (1 - effectiveLid * 0.25);
+          ctx.save();
+          ctx.translate(0, yRim - ry);
+          ctx.beginPath();
+          ctx.roundRect(-rx + 2, -lidLift - lidH, (rx - 2) * 2, lidH, [8, 8, 3, 3]);
+          const lidGrad = ctx.createLinearGradient(0, -lidLift - lidH, 0, -lidLift);
+          lidGrad.addColorStop(0, colors.dark);
+          lidGrad.addColorStop(0.6, colors.main);
+          lidGrad.addColorStop(1, colors.light);
+          ctx.fillStyle = lidGrad;
+          ctx.fill();
+          ctx.strokeStyle = colors.border;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Handle
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.roundRect(-14, -lidLift - lidH - 6, 28, 6, 3);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Back Rim Arc (PI to 2*PI)
+        ctx.beginPath();
+        ctx.ellipse(0, yRim, rx, ry, 0, Math.PI, Math.PI * 2, false);
+        ctx.strokeStyle = colors.dark;
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Deep Inner Cavity
+        ctx.beginPath();
+        ctx.ellipse(0, yRim, rx - 5, ry - 3, 0, 0, Math.PI * 2);
+        const cavGrad = ctx.createRadialGradient(0, yRim - 2, 2, 0, yRim + 6, rx - 4);
+        cavGrad.addColorStop(0, '#000000');
+        cavGrad.addColorStop(0.55, '#04090e');
+        cavGrad.addColorStop(0.85, colors.dark);
+        cavGrad.addColorStop(1, '#09131a');
+        ctx.fillStyle = cavGrad;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      // ==========================================
+      // LAYER 2: FRONT (Hull, Front Lip, Badge)
+      // ==========================================
+      if (layer === 'front' || layer === 'all') {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.translate(0, yBase);
+        ctx.scale(bounceX, bounceY);
+        ctx.translate(0, -yBase);
+
+        if (isHovered) {
+          ctx.shadowColor = colors.border;
+          ctx.shadowBlur = 22;
+        } else {
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+          ctx.shadowBlur = 10;
+        }
+
+        // 1. Front Hull (Cylindrical 3D Bottom)
+        const bodyGrad = ctx.createLinearGradient(-rx, 0, rx, 0);
+        bodyGrad.addColorStop(0, colors.dark);
+        bodyGrad.addColorStop(0.18, colors.main);
+        bodyGrad.addColorStop(0.38, colors.light);
+        bodyGrad.addColorStop(0.65, colors.main);
+        bodyGrad.addColorStop(0.9, colors.dark);
+        bodyGrad.addColorStop(1, '#021811');
+
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.moveTo(-rx + 4, yRim);
+        ctx.lineTo(rx - 4, yRim);
+        ctx.lineTo(rxBase, yBase);
+        ctx.quadraticCurveTo(0, yBase + 7, -rxBase, yBase);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = colors.border;
+        ctx.lineWidth = isHovered ? 2.5 : 1.2;
+        ctx.stroke();
+
+        // 2. Embossed vertical ribs
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+        ctx.lineWidth = 1.5;
+        [-rx * 0.42, 0, rx * 0.42].forEach(ribX => {
+          ctx.beginPath();
+          ctx.moveTo(ribX, yRim + 12);
+          ctx.lineTo(ribX * 0.82, yBase - 8);
+          ctx.stroke();
+        });
+
+        // 3. Feet pads
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.roundRect(-rxBase - 3, yBase - 3, 8, 9, 2);
+        ctx.roundRect(rxBase - 5, yBase - 3, 8, 9, 2);
+        ctx.fill();
+
+        // 4. Front Rim Lip (0 to PI) - OCCLUDES FALLING ITEM
+        ctx.beginPath();
+        ctx.ellipse(0, yRim, rx, ry, 0, 0, Math.PI, false);
+        ctx.lineTo(-rx + 4, yRim + 10);
+        ctx.ellipse(0, yRim + 10, rx - 4, ry - 3, 0, Math.PI, 0, true);
+        ctx.closePath();
+        const lipGrad = ctx.createLinearGradient(-rx, yRim, rx, yRim);
+        lipGrad.addColorStop(0, colors.dark);
+        lipGrad.addColorStop(0.3, colors.light);
+        lipGrad.addColorStop(0.7, colors.main);
+        lipGrad.addColorStop(1, colors.dark);
+        ctx.fillStyle = lipGrad;
+        ctx.fill();
+
+        // Specular highlight crest
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.ellipse(0, yRim, rx - 2, ry - 1, 0, 0.1, Math.PI - 0.1, false);
+        ctx.stroke();
+
+        // Side Grip Handles
+        ctx.fillStyle = colors.dark;
+        ctx.strokeStyle = colors.border;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(-rx - 6, yRim + 2, 7, 9, 2);
+        ctx.roundRect(rx - 1, yRim + 2, 7, 9, 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 5. SNI Recessed Badge Plate
+        const badgeW = w * 0.72;
+        const badgeH = h * 0.44;
+        const badgeY = yRim + 18;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.beginPath();
+        ctx.roundRect(-badgeW / 2, badgeY, badgeW, badgeH, 6);
+        ctx.fill();
+        ctx.strokeStyle = isHovered ? colors.light : colors.border;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillText(colors.icon, 0, badgeY + 18);
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = colors.light;
+        ctx.fillText(colors.label, 0, badgeY + 32);
+        ctx.font = 'bold 8px sans-serif';
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText('SNI 19-3983', 0, badgeY + 42);
+        ctx.font = '7.5px sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.fillText(colors.sub, 0, badgeY + 52);
+
+        ctx.restore();
+      }
+    }
+
+    // Interactive Mission 1 Canvas Engine (Dual Control + 3D Layered Entry Animation)
+    let m1ItemPos = { x: 380, y: 130, isDragging: false };
+    let m1MousePos = { x: 380, y: 130, isDown: false };
+    let m1EnteringAnim = null;
+    let m1BinDynamics = {
+      organik: { squish: 0, lid: 0 },
+      anorganik: { squish: 0, lid: 0 },
+      b3: { squish: 0, lid: 0 }
+    };
+    let m1Particles = [];
+    let m1Shockwaves = [];
+    let m1ScorePopups = [];
+
+    function spawnHtmlBinSplash(binType, mouthX, mouthY) {
+      const colors = {
+        organik: ['#34d399', '#10b981', '#059669', '#6ee7b7'],
+        anorganik: ['#fbbf24', '#f59e0b', '#d97706', '#fde047'],
+        b3: ['#f87171', '#ef4444', '#dc2626', '#fca5a5']
+      }[binType];
+
+      for (let i = 0; i < 18; i++) {
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.6;
+        const speed = 3.5 + Math.random() * 5.5;
+        m1Particles.push({
+          x: mouthX + (Math.random() - 0.5) * 20,
+          y: mouthY + (Math.random() - 0.5) * 6,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: 5 + Math.random() * 7,
+          alpha: 1.0,
+          rotation: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 0.25,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          type: binType === 'organik' ? 'leaf' : binType === 'anorganik' ? 'star' : 'spark'
+        });
+      }
+
+      m1Shockwaves.push({
+        x: mouthX,
+        y: mouthY,
+        rx: 20,
+        ry: 6,
+        maxRx: 75,
+        color: colors[0],
+        alpha: 0.95
+      });
+    }
+
+    function initMission1Canvas() {
+      const cvs = document.getElementById('m1Canvas');
+      if (!cvs) return;
+      const ctx = cvs.getContext('2d');
+      if (!ctx) return;
+
+      m1ItemPos = { x: cvs.width / 2, y: 130, isDragging: false };
+      m1EnteringAnim = null;
+      m1Particles = [];
+      m1Shockwaves = [];
+      m1ScorePopups = [];
+
+      const getCoords = (e) => {
+        const r = cvs.getBoundingClientRect();
+        return {
+          x: (e.clientX - r.left) * (cvs.width / r.width),
+          y: (e.clientY - r.top) * (cvs.height / r.height)
+        };
+      };
+
+      cvs.onpointerdown = (e) => {
+        if (m1EnteringAnim) return;
+        const pt = getCoords(e);
+        m1MousePos = { x: pt.x, y: pt.y, isDown: true };
+        if (Math.hypot(pt.x - m1ItemPos.x, pt.y - m1ItemPos.y) < 65) {
+          m1ItemPos.isDragging = true;
+          playBeep('click');
+        }
+        if (pt.y > cvs.height - 150) {
+          if (pt.x < cvs.width * 0.35) sortWaste('organik');
+          else if (pt.x < cvs.width * 0.65) sortWaste('anorganik');
+          else sortWaste('b3');
+        }
+      };
+
+      cvs.onpointermove = (e) => {
+        const pt = getCoords(e);
+        m1MousePos.x = pt.x; m1MousePos.y = pt.y;
+        if (m1ItemPos.isDragging && !m1EnteringAnim) {
+          m1ItemPos.x = pt.x; m1ItemPos.y = pt.y;
+        }
+      };
+
+      const handlePointerEnd = () => {
+        m1MousePos.isDown = false;
+        if (m1ItemPos.isDragging && !m1EnteringAnim) {
+          m1ItemPos.isDragging = false;
+          if (m1ItemPos.y > cvs.height - 180) {
+            if (m1ItemPos.x < cvs.width * 0.35) sortWaste('organik');
+            else if (m1ItemPos.x < cvs.width * 0.65) sortWaste('anorganik');
+            else sortWaste('b3');
+          } else {
+            m1ItemPos.x = cvs.width / 2; m1ItemPos.y = 130;
+          }
+        }
+      };
+      cvs.onpointerup = handlePointerEnd;
+      cvs.onpointercancel = handlePointerEnd;
+
+      if (m1AnimId) cancelAnimationFrame(m1AnimId);
+
+      function loop() {
+        if (!document.getElementById('m1Canvas')) return;
+        const now = performance.now();
+        const w = cvs.width, h = cvs.height;
+        ctx.clearRect(0, 0, w, h);
+
+        // 1. Background (Video or Sci-Fi Eco-Lab)
+        if (arCameraActive && htmlVideoElem && htmlVideoElem.readyState >= 2) {
+          ctx.save();
+          ctx.translate(w, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(htmlVideoElem, 0, 0, w, h);
+          ctx.restore();
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+          ctx.fillRect(0, 0, w, h);
+        } else {
+          const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+          bgGrad.addColorStop(0, '#0f172a');
+          bgGrad.addColorStop(0.5, '#064e3b');
+          bgGrad.addColorStop(1, '#022c22');
+          ctx.fillStyle = bgGrad;
+          ctx.fillRect(0, 0, w, h);
+        }
+
+        // 2. Bin Coordinates & Hover
+        const binY = h - 75;
+        const binW = Math.min(130, w * 0.26);
+        const binH = 110;
+        const b1X = w * 0.2, b2X = w * 0.5, b3X = w * 0.8;
+        const binPositions = { organik: b1X, anorganik: b2X, b3: b3X };
+
+        let hovered = null;
+        if (m1ItemPos.isDragging && m1ItemPos.y > h - 170) {
+          if (m1ItemPos.x < w * 0.35) hovered = 'organik';
+          else if (m1ItemPos.x < w * 0.65) hovered = 'anorganik';
+          else hovered = 'b3';
+        }
+
+        // Spring relaxation
+        ['organik', 'anorganik', 'b3'].forEach(type => {
+          const bd = m1BinDynamics[type];
+          if (bd.squish > 0.01) bd.squish *= 0.84; else bd.squish = 0;
+          const isEnteringThis = m1EnteringAnim && m1EnteringAnim.chosenBin === type;
+          const targetLid = isEnteringThis ? 1.0 : (hovered === type ? 0.45 : 0);
+          bd.lid += (targetLid - bd.lid) * 0.18;
+        });
+
+        // ==========================================
+        // LAYER 1: BINS BACK CAVITY
+        // ==========================================
+        ['organik', 'anorganik', 'b3'].forEach(type => {
+          const bx = binPositions[type];
+          const bd = m1BinDynamics[type];
+          const osc = Math.sin(now / 35) * (bd.squish * 0.22);
+          drawRealisticSniBinHtml(ctx, bx, binY, binW, binH, type, {
+            isHovered: hovered === type,
+            lidOpen: bd.lid,
+            bounceX: 1.0 + osc * 0.8,
+            bounceY: 1.0 - osc,
+            layer: 'back'
+          });
+        });
+
+        // ==========================================
+        // LAYER 2: WASTE ITEM (REGULAR OR 3D ENTERING)
+        // ==========================================
+        if (m1EnteringAnim) {
+          const elapsed = now - m1EnteringAnim.startTime;
+          const t = Math.max(0, Math.min(1, elapsed / m1EnteringAnim.duration));
+          let curX, curY, curScale, curAlpha = 1.0, curRot;
+
+          if (t < 0.52) {
+            const arcT = t / 0.52;
+            const easeT = arcT * arcT;
+            curX = m1EnteringAnim.startX + (m1EnteringAnim.targetX - m1EnteringAnim.startX) * easeT;
+            const linearY = m1EnteringAnim.startY + (m1EnteringAnim.targetY - m1EnteringAnim.startY) * easeT;
+            curY = linearY + Math.sin(arcT * Math.PI) * -35;
+            curScale = 1.0 - easeT * 0.28;
+            curRot = easeT * Math.PI * 1.5;
+          } else {
+            if (!m1EnteringAnim.hasImpacted) {
+              m1EnteringAnim.hasImpacted = true;
+              m1BinDynamics[m1EnteringAnim.chosenBin].squish = 1.0;
+              playBeep('plop');
+              spawnHtmlBinSplash(m1EnteringAnim.chosenBin, m1EnteringAnim.targetX, m1EnteringAnim.targetY);
+
+              m1ScorePopups.push({
+                x: m1EnteringAnim.targetX,
+                y: m1EnteringAnim.targetY - 20,
+                text: m1EnteringAnim.isCorrect ? '+100 POIN AMAL ⭐' : '⚠️ SALAH TONG!',
+                color: m1EnteringAnim.isCorrect ? '#34d399' : '#f87171',
+                alpha: 1.0,
+                scale: 0.7,
+                vy: -2.2
+              });
+
+              if (m1EnteringAnim.isCorrect) {
+                playBeep('success');
+                score += 100;
+                earthHealth = Math.min(100, earthHealth + 8);
+                updateHud();
+                showToast(true, 'TEPAT SEKALI!', 'Botol plastik masuk ke Tong Kuning (Anorganik) untuk didaur ulang.');
+              } else {
+                playBeep('error');
+                lives--;
+                showToast(false, 'KURANG TEPAT!', 'Botol plastik bukan sampah organik/B3!');
+                updateHud();
+              }
+            }
+
+            const deepT = (t - 0.52) / 0.48;
+            curX = m1EnteringAnim.targetX + Math.sin(deepT * Math.PI * 2) * 2;
+            curY = m1EnteringAnim.targetY + deepT * 42;
+            curScale = 0.72 * (1.0 - deepT * 0.82);
+            curRot = Math.PI * 1.5 + deepT * Math.PI;
+            curAlpha = Math.max(0, 1.0 - deepT * 0.95);
+          }
+
+          ctx.save();
+          ctx.globalAlpha = curAlpha;
+          ctx.translate(curX, curY);
+          ctx.rotate(curRot);
+          drawRealisticWasteItemHtml(ctx, 0, 0, 96 * curScale);
+          if (t >= 0.52) {
+            const darkAlpha = ((t - 0.52) / 0.48) * 0.8;
+            ctx.fillStyle = `rgba(0,0,0,${darkAlpha})`;
+            ctx.beginPath();
+            ctx.arc(0, 0, 48 * curScale, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+
+          if (t >= 1.0) {
+            const wasCorrect = m1EnteringAnim.isCorrect;
+            m1EnteringAnim = null;
+            if (wasCorrect) {
+              setTimeout(() => showMissionComplete(0), 400);
+            } else {
+              m1ItemPos.x = w / 2;
+              m1ItemPos.y = 130;
+            }
+          }
+        } else {
+          if (!m1ItemPos.isDragging) {
+            m1ItemPos.y = 130 + Math.sin(now / 400) * 5;
+          }
+          drawRealisticWasteItemHtml(ctx, m1ItemPos.x, m1ItemPos.y, m1ItemPos.isDragging ? 110 : 96);
+
+          ctx.font = 'bold 13px sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.shadowColor = 'rgba(0,0,0,0.85)';
+          ctx.shadowBlur = 6;
+          ctx.fillText('Botol Plastik Air Mineral (PET)', m1ItemPos.x, m1ItemPos.y + 60);
+
+          if (!m1ItemPos.isDragging) {
+            ctx.font = '10px sans-serif';
+            ctx.fillStyle = arCameraActive ? '#6ee7b7' : '#93c5fd';
+            ctx.fillText(arCameraActive ? '✊ Jepit telunjuk/jempol atau seret dengan mouse/sentuhan' : '🖱️ Seret sampah ke tong pilihan atau klik tong di bawah', m1ItemPos.x, m1ItemPos.y + 76);
+          }
+        }
+
+        // ==========================================
+        // LAYER 3: BINS FRONT HULL & FRONT OCCLUSION LIP
+        // (Clips the falling item as it enters!)
+        // ==========================================
+        ['organik', 'anorganik', 'b3'].forEach(type => {
+          const bx = binPositions[type];
+          const bd = m1BinDynamics[type];
+          const osc = Math.sin(now / 35) * (bd.squish * 0.22);
+          drawRealisticSniBinHtml(ctx, bx, binY, binW, binH, type, {
+            isHovered: hovered === type,
+            lidOpen: bd.lid,
+            bounceX: 1.0 + osc * 0.8,
+            bounceY: 1.0 - osc,
+            layer: 'front'
+          });
+        });
+
+        // ==========================================
+        // LAYER 4: PARTICLES, SHOCKWAVES & FLOATING SCORES
+        // ==========================================
+        const activeSw = [];
+        for (const sw of m1Shockwaves) {
+          sw.rx += 3.5; sw.ry += 1.2; sw.alpha -= 0.05;
+          if (sw.alpha > 0 && sw.rx < sw.maxRx) {
+            ctx.save();
+            ctx.globalAlpha = sw.alpha;
+            ctx.strokeStyle = sw.color;
+            ctx.lineWidth = 3;
+            ctx.shadowColor = sw.color;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.ellipse(sw.x, sw.y, sw.rx, sw.ry, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+            activeSw.push(sw);
+          }
+        }
+        m1Shockwaves = activeSw;
+
+        const activeP = [];
+        for (const p of m1Particles) {
+          p.x += p.vx; p.y += p.vy; p.vy += 0.22; p.rotation += p.vRot; p.alpha -= 0.035;
+          if (p.alpha > 0) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.globalAlpha = p.alpha;
+            ctx.fillStyle = p.color;
+            if (p.type === 'leaf') {
+              ctx.beginPath();
+              ctx.ellipse(0, 0, p.size, p.size * 0.45, 0.3, 0, Math.PI * 2);
+              ctx.fill();
+            } else if (p.type === 'star') {
+              ctx.beginPath();
+              for (let i = 0; i < 8; i++) {
+                const r = i % 2 === 0 ? p.size : p.size * 0.4;
+                const ang = (i * Math.PI) / 4;
+                if (i === 0) ctx.moveTo(Math.cos(ang) * r, Math.sin(ang) * r);
+                else ctx.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
+              }
+              ctx.closePath(); ctx.fill();
+            } else {
+              ctx.beginPath(); ctx.arc(0, 0, p.size, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.restore();
+            activeP.push(p);
+          }
+        }
+        m1Particles = activeP;
+
+        const activePop = [];
+        for (const pop of m1ScorePopups) {
+          pop.y += pop.vy; pop.vy *= 0.94; pop.scale = Math.min(1.0, pop.scale + 0.06); pop.alpha -= 0.022;
+          if (pop.alpha > 0) {
+            ctx.save();
+            ctx.translate(pop.x, pop.y);
+            ctx.scale(pop.scale, pop.scale);
+            ctx.globalAlpha = pop.alpha;
+            ctx.shadowColor = pop.color;
+            ctx.shadowBlur = 14;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+            ctx.beginPath();
+            ctx.roundRect(-75, -16, 150, 32, 16);
+            ctx.fill();
+            ctx.strokeStyle = pop.color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillStyle = pop.color;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pop.text, 0, 0);
+            ctx.restore();
+            activePop.push(pop);
+          }
+        }
+        m1ScorePopups = activePop;
+
+        // ==========================================
+        // LAYER 5: MEDIAPIPE SKELETON & DUAL CONTROL
+        // ==========================================
+        if (arCameraActive && htmlHandState.landmarks) {
+          drawMediaPipeHandOnCanvas(ctx, htmlHandState.landmarks, htmlHandState.isGrabbing, w, h);
+          const handX = htmlHandState.x * w;
+          const handY = htmlHandState.y * h;
+
+          if (htmlHandState.isGrabbing && !m1ItemPos.isDragging && !m1EnteringAnim) {
+            if (Math.hypot(handX - m1ItemPos.x, handY - m1ItemPos.y) < 90) {
+              m1ItemPos.isDragging = true;
+            }
+          }
+          if (m1ItemPos.isDragging && htmlHandState.isGrabbing && !m1EnteringAnim) {
+            m1ItemPos.x = handX; m1ItemPos.y = handY;
+          }
+          if (m1ItemPos.isDragging && !htmlHandState.isGrabbing && !m1MousePos.isDown && !m1EnteringAnim) {
+            handlePointerEnd();
+          }
+        }
+
+        // 6. HUD Status Banner
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(14, 14, 280, 48, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = '#34d399';
+        ctx.textAlign = 'left';
+        ctx.fillText('🎮 DUAL CONTROL AKTIF', 24, 32);
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText(arCameraActive ? (htmlHandState.isDetected ? '📷 Tangan Terdeteksi (Jepit/Pinch)' : '📷 Mencari Tangan... / Pakai Mouse') : '🖱️ Sentuh/Mouse Aktif (Nyalakan AR Kamera)', 24, 48);
+
+        m1AnimId = requestAnimationFrame(loop);
+      }
+      m1AnimId = requestAnimationFrame(loop);
+    }
+
+    // Realistic Tree and Forestry Tool Drawing
+    function drawRealisticTreeHtml(ctx, x, y, cond) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Soil mound
+      const moundGrad = ctx.createRadialGradient(0, 75, 10, 0, 75, 110);
+      moundGrad.addColorStop(0, cond === 'dehidrasi' ? '#a16207' : '#594126');
+      moundGrad.addColorStop(1, cond === 'dehidrasi' ? '#78350f' : '#2d1e10');
+      ctx.fillStyle = moundGrad;
+      ctx.beginPath();
+      ctx.ellipse(0, 75, 105, 30, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Dehydration cracks
+      if (cond === 'dehidrasi') {
+        ctx.strokeStyle = '#451a03'; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-60, 74); ctx.lineTo(-30, 78); ctx.lineTo(-5, 72);
+        ctx.moveTo(15, 80); ctx.lineTo(45, 76); ctx.lineTo(75, 82);
+        ctx.stroke();
+      }
+
+      // Trunk
+      if (cond === 'miring') ctx.rotate(0.28);
+      const trunkGrad = ctx.createLinearGradient(-20, 0, 20, 0);
+      trunkGrad.addColorStop(0, '#3f220c');
+      trunkGrad.addColorStop(0.5, '#854d0e');
+      trunkGrad.addColorStop(1, '#2e1505');
+      ctx.fillStyle = trunkGrad;
+      ctx.beginPath();
+      ctx.moveTo(-16, 75); ctx.quadraticCurveTo(-12, 20, -8, -20);
+      ctx.lineTo(-24, -45); ctx.lineTo(-18, -48); ctx.lineTo(-5, -26);
+      ctx.lineTo(0, -55); ctx.lineTo(6, -55); ctx.lineTo(7, -24);
+      ctx.lineTo(24, -42); ctx.lineTo(28, -38);
+      ctx.quadraticCurveTo(12, 20, 16, 75);
+      ctx.closePath();
+      ctx.fill();
+
+      // Canopy
+      let col1 = '#15803d', col2 = '#22c55e', col3 = '#166534';
+      if (cond === 'dehidrasi') { col1 = '#a16207'; col2 = '#ca8a04'; col3 = '#713f12'; }
+      if (cond === 'klorosis') { col1 = '#facc15'; col2 = '#fef08a'; col3 = '#84cc16'; }
+
+      [[-38, -50, 34], [38, -50, 34], [0, -75, 42], [-20, -85, 32], [20, -85, 32], [0, -105, 30]].forEach(([lx, ly, lr]) => {
+        const puffGrad = ctx.createRadialGradient(lx - 6, ly - 6, 4, lx, ly, lr);
+        puffGrad.addColorStop(0, col2); puffGrad.addColorStop(0.7, col1); puffGrad.addColorStop(1, col3);
+        ctx.fillStyle = puffGrad;
+        ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // Pests
+      if (cond === 'hama') {
+        ctx.fillStyle = '#dc2626';
+        [[-32, -55], [0, -85], [30, -55]].forEach(([hx, hy]) => {
+          ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2); ctx.fill();
+        });
+      }
+
+      ctx.restore();
+    }
+
+    function drawRealisticToolHtml(ctx, tool, x, y, size, isHovered) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.font = '26px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (isHovered) { ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 14; }
+      const icon = { air: '💧', kompos: '🌱', sekop: '🧑‍🌾', semprotan: '🌿', ajir: '🎋', gunting: '✂️', kapak: '🪓', api: '🔥' }[tool] || '🌱';
+      ctx.fillText(icon, 0, 0);
+      ctx.restore();
+    }
+
+    let m2DraggedTool = null;
+    let m2MousePos = { x: 0, y: 0, isDown: false };
+
+    function initMission2Canvas() {
+      const cvs = document.getElementById('m2Canvas');
+      if (!cvs) return;
+      const ctx = cvs.getContext('2d');
+      if (!ctx) return;
+
+      const currentItem = FORESTRY_OBJECTS[forestryIndex] || FORESTRY_OBJECTS[0];
+      const tools = ['air', 'kompos', 'sekop', 'semprotan', 'ajir', 'gunting', 'kapak', 'api'];
+
+      const getCoords = (e) => {
+        const r = cvs.getBoundingClientRect();
+        return {
+          x: (e.clientX - r.left) * (cvs.width / r.width),
+          y: (e.clientY - r.top) * (cvs.height / r.height)
+        };
+      };
+
+      cvs.onpointerdown = (e) => {
+        const pt = getCoords(e);
+        m2MousePos = { x: pt.x, y: pt.y, isDown: true };
+        if (pt.y > cvs.height - 85) {
+          const tWidth = cvs.width / tools.length;
+          const idx = Math.floor(pt.x / tWidth);
+          if (idx >= 0 && idx < tools.length) {
+            m2DraggedTool = { key: tools[idx], x: pt.x, y: pt.y };
+            playBeep('click');
+          }
+        }
+      };
+
+      cvs.onpointermove = (e) => {
+        const pt = getCoords(e);
+        m2MousePos.x = pt.x; m2MousePos.y = pt.y;
+        if (m2DraggedTool) {
+          m2DraggedTool.x = pt.x; m2DraggedTool.y = pt.y;
+        }
+      };
+
+      const handlePointerEnd = () => {
+        m2MousePos.isDown = false;
+        if (m2DraggedTool) {
+          const key = m2DraggedTool.key;
+          m2DraggedTool = null;
+          if (key) {
+            careTree(key);
+          }
+        }
+      };
+      cvs.onpointerup = handlePointerEnd;
+      cvs.onpointercancel = handlePointerEnd;
+
+      if (m2AnimId) cancelAnimationFrame(m2AnimId);
+
+      function loop() {
+        if (!document.getElementById('m2Canvas')) return;
+        const w = cvs.width, h = cvs.height;
+        ctx.clearRect(0, 0, w, h);
+
+        // Background
+        if (arCameraActive && htmlVideoElem && htmlVideoElem.readyState >= 2) {
+          ctx.save();
+          ctx.translate(w, 0); ctx.scale(-1, 1);
+          ctx.drawImage(htmlVideoElem, 0, 0, w, h);
+          ctx.restore();
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+          ctx.fillRect(0, 0, w, h);
+        } else {
+          const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+          bgGrad.addColorStop(0, '#022c22');
+          bgGrad.addColorStop(0.5, '#064e3b');
+          bgGrad.addColorStop(1, '#020617');
+          ctx.fillStyle = bgGrad;
+          ctx.fillRect(0, 0, w, h);
+        }
+
+        // Tree
+        const cond = currentItem.correct === 'air' ? 'dehidrasi' : currentItem.correct === 'kompos' ? 'klorosis' : currentItem.correct === 'sekop' ? 'gulma' : currentItem.correct === 'semprotan' ? 'hama' : currentItem.correct === 'ajir' ? 'miring' : 'ranting';
+        drawRealisticTreeHtml(ctx, w / 2, h * 0.44, cond);
+
+        // Tool Rack on Canvas
+        const tWidth = w / tools.length;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(0, h - 80, w, 80);
+
+        for (let i = 0; i < tools.length; i++) {
+          const tx = i * tWidth + tWidth / 2;
+          const ty = h - 45;
+          const isHov = Math.hypot(m2MousePos.x - tx, m2MousePos.y - ty) < tWidth / 2;
+          drawRealisticToolHtml(ctx, tools[i], tx, ty, 44, isHov);
+        }
+
+        // MediaPipe Hand
+        if (arCameraActive && htmlHandState.landmarks) {
+          drawMediaPipeHandOnCanvas(ctx, htmlHandState.landmarks, htmlHandState.isGrabbing, w, h);
+          const handX = htmlHandState.x * w;
+          const handY = htmlHandState.y * h;
+
+          if (htmlHandState.isGrabbing && !m2DraggedTool) {
+            if (handY > h - 85) {
+              const idx = Math.floor(handX / tWidth);
+              if (idx >= 0 && idx < tools.length) {
+                m2DraggedTool = { key: tools[idx], x: handX, y: handY };
+                playBeep('click');
+              }
+            }
+          }
+          if (m2DraggedTool && htmlHandState.isGrabbing) {
+            m2DraggedTool.x = handX; m2DraggedTool.y = handY;
+          }
+          if (m2DraggedTool && !htmlHandState.isGrabbing && !m2MousePos.isDown) {
+            handlePointerEnd();
+          }
+        }
+
+        // Dragged Tool
+        if (m2DraggedTool) {
+          drawRealisticToolHtml(ctx, m2DraggedTool.key, m2DraggedTool.x, m2DraggedTool.y, 60, true);
+        }
+
+        // Status Banner
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.beginPath();
+        ctx.roundRect(14, 14, 270, 46, 8);
+        ctx.fill();
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = '#38bdf8';
+        ctx.textAlign = 'left';
+        ctx.fillText('🌿 DUAL CONTROL: KLINIK POHON', 24, 32);
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText(arCameraActive ? (htmlHandState.isDetected ? '📷 Tangan Terdeteksi (Jepit Alat)' : '📷 Mencari Tangan... / Pakai Mouse') : '🖱️ Sentuh/Mouse Aktif (Nyalakan AR Kamera)', 24, 48);
+
+        m2AnimId = requestAnimationFrame(loop);
+      }
+      m2AnimId = requestAnimationFrame(loop);
+    }
+  </script>
+</body>
+</html>
